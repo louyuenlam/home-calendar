@@ -821,7 +821,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v10 · 2026-04-28';
+const APP_VERSION = 'v11 · 2026-04-29';
 
 // ----- i18n -----
 const I18N = {
@@ -1147,6 +1147,19 @@ function formatDayLabel(key) {
 function uid() {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID();
   return 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+// Normalise time value coming back from Sheets into 'HH:mm' for display.
+// Handles plain 'HH:mm', ISO timestamps from old Sheets serialisation, etc.
+function formatTimeForDisplay(v) {
+  if (v == null || v === '') return '';
+  const s = String(v).trim();
+  if (!s) return '';
+  const m1 = s.match(/^(\d{1,2}):(\d{2})/);
+  if (m1) return (m1[1].length < 2 ? '0' + m1[1] : m1[1]) + ':' + m1[2];
+  const m2 = s.match(/T(\d{2}):(\d{2})/);
+  if (m2) return m2[1] + ':' + m2[2];
+  return '';
 }
 
 // Roll a date string forward by recurrence interval
@@ -1504,7 +1517,8 @@ function renderCalendar() {
 function renderEventRow(ev) {
   const p = ev.assignee && PERSON_BY_ID[ev.assignee];
   const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
-  const time = ev.time ? `<span>${escapeHtml(ev.time)}</span>` : '';
+  const cleanTime = formatTimeForDisplay(ev.time);
+  const time = cleanTime ? `<span>${escapeHtml(cleanTime)}</span>` : '';
   const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', yearly:'recYearly' };
   const recurring = ev.recurring && recurMap[ev.recurring]
     ? `<span>↻ ${escapeHtml(t(recurMap[ev.recurring]))}</span>` : '';
