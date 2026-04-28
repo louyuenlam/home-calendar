@@ -1274,10 +1274,14 @@ async function updateEvent(item) {
   rerenderActive();
 }
 async function deleteEvent(id) {
+  console.log('[DELETE] deleteEvent called with id:', id);
+  console.log('[DELETE] state.events before filter:', state.events.length);
   state.events = state.events.filter(e => e.id !== id);
+  console.log('[DELETE] state.events after filter:', state.events.length);
   lsSet(LS.events, state.events);
   rerenderActive();
-  await syncPost('delete', 'events', { id });
+  const result = await syncPost('delete', 'events', { id });
+  console.log('[DELETE] syncPost result:', result, 'state.events after sync:', state.events.length);
   rerenderActive();
 }
 async function addBill(item) {
@@ -1944,7 +1948,7 @@ function renderModal() {
           <div class="subtitle">${escapeHtml(m.body)}</div>
           <div class="modal-actions">
             <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
-            <button class="btn danger" onclick="(${m.onConfirm})()">${escapeHtml(m.confirmLabel||t('save'))}</button>
+            <button class="btn danger" onclick="runModalConfirm()">${escapeHtml(m.confirmLabel||t('save'))}</button>
           </div>
         </div>
       </div>
@@ -2056,10 +2060,13 @@ function openEditFlow(kind, id, instanceDate, isInstance) {
 }
 
 function openDeleteFlow(kind, id, instanceDate, isInstance) {
+  console.log('[DELETE] openDeleteFlow called:', {kind, id, instanceDate, isInstance});
   const list = kind === 'events' ? state.events : state.bills;
   const item = list.find(x => x.id === id);
-  if (!item) return;
+  console.log('[DELETE] item found:', item);
+  if (!item) { console.log('[DELETE] EXIT: item not found in state'); return; }
   const isRecurring = item.recurring && item.recurring !== 'none' && item.recurring !== '';
+  console.log('[DELETE] isRecurring:', isRecurring);
   if (isRecurring && isInstance) {
     state.modal = { type: 'recurChoice', mode: 'delete', kind, id, instanceDate, item };
     render();
@@ -2071,9 +2078,17 @@ function openDeleteFlow(kind, id, instanceDate, isInstance) {
     body: t('confirmDeleteBody'),
     confirmLabel: t('deleteBtn'),
     onConfirm: () => {
+      console.log('[DELETE] onConfirm fired with id:', id, 'kind:', kind);
       state.modal = null; render();
-      if (kind === 'events') deleteEvent(id).then(() => toast(t('toastEventDeleted')));
-      else deleteBill(id).then(() => toast(t('toastBillDeleted')));
+      if (kind === 'events') {
+        deleteEvent(id)
+          .then(() => { console.log('[DELETE] deleteEvent resolved'); toast(t('toastEventDeleted')); })
+          .catch(err => console.log('[DELETE] deleteEvent ERROR:', err));
+      } else {
+        deleteBill(id)
+          .then(() => { console.log('[DELETE] deleteBill resolved'); toast(t('toastBillDeleted')); })
+          .catch(err => console.log('[DELETE] deleteBill ERROR:', err));
+      }
     }
   };
   render();
@@ -2293,6 +2308,16 @@ function closeModal(e) {
   if (e && e.target !== e.currentTarget) return;
   state.modal = null;
   render();
+}
+
+function runModalConfirm() {
+  const m = state.modal;
+  console.log('[CONFIRM] runModalConfirm called, modal:', m);
+  if (!m || m.type !== 'confirm' || typeof m.onConfirm !== 'function') {
+    console.log('[CONFIRM] EXIT: invalid state', {hasModal: !!m, type: m && m.type, hasFn: typeof (m && m.onConfirm)});
+    return;
+  }
+  m.onConfirm();
 }
 
 // ----- Settings actions -----
