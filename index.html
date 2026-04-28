@@ -44,6 +44,9 @@
   --p-house:      #7d8d6e;
   --p-house-tint: #e6ebde;
 
+  --p-dad:        #6b8a8c;
+  --p-dad-tint:   #dfe9ea;
+
   --p-milk:       #b89a7a;
   --p-milk-tint:  #f0e8dc;
   --p-bb:         #d49775;
@@ -494,6 +497,7 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 .chip.amus  { background: var(--p-amus-tint);  color: var(--p-amus); }
 .chip.mum   { background: var(--p-mum-tint);   color: var(--p-mum); }
 .chip.house { background: var(--p-house-tint); color: var(--p-house); }
+.chip.dad   { background: var(--p-dad-tint);   color: var(--p-dad); }
 .chip.milk  { background: var(--p-milk-tint);  color: var(--p-milk); }
 .chip.bb    { background: var(--p-bb-tint);    color: var(--p-bb); }
 .chip.cilla { background: var(--p-cilla-tint); color: var(--p-cilla); }
@@ -787,6 +791,7 @@ const PEOPLE = [
   { id: 'jess',  name: 'Jessica', cls: 'jess' },
   { id: 'amus',  name: 'Amus',    cls: 'amus' },
   { id: 'mum',   name: 'Mum',     cls: 'mum' },
+  { id: 'dad',   name: 'Dad',     cls: 'dad' },
   { id: 'house', name: 'House',   cls: 'house' },
   { id: 'milk',  name: 'Milk',    cls: 'milk',  pet: true },
   { id: 'bb',    name: 'BB',      cls: 'bb',    pet: true },
@@ -824,6 +829,18 @@ const I18N = {
     fAutoRoll: 'Auto-roll date when ticked done',
     fPaid: 'Paid',
     fDone: 'Done',
+    fSyncToIos: 'Send to phone calendar',
+    fAlarm: 'Alarm',
+    alarmNone: 'No alarm',
+    alarmAtTime: 'At time of event',
+    alarm5min: '5 minutes before',
+    alarm15min: '15 minutes before',
+    alarm30min: '30 minutes before',
+    alarm1hr: '1 hour before',
+    alarm2hr: '2 hours before',
+    alarm1day: '1 day before',
+    alarm2day: '2 days before',
+    alarm1week: '1 week before',
     recNone: 'none', recDaily: 'daily', recWeekly: 'weekly',
     recFortnightly: 'fortnightly',
     recMonthly: 'monthly', recQuarterly: 'quarterly', recYearly: 'yearly',
@@ -897,7 +914,7 @@ const I18N = {
     syncQueued: 'Offline — queued', syncNoUrl: 'No sync URL — queued',
 
     untitled: '(untitled)', never: 'Never',
-    pJess: 'Jessica', pAmus: 'Amus', pMum: 'Mum', pHouse: 'House',
+    pJess: 'Jessica', pAmus: 'Amus', pMum: 'Mum', pDad: 'Dad', pHouse: 'House',
     pMilk: 'Milk', pBb: 'BB', pCilla: 'Cilla',
     months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     weekdaysFull: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -931,6 +948,18 @@ const I18N = {
     fAutoRoll: '完成後自動延至下次',
     fPaid: '已付款',
     fDone: '已完成',
+    fSyncToIos: '傳送到手機日曆',
+    fAlarm: '提醒',
+    alarmNone: '不提醒',
+    alarmAtTime: '事件開始時',
+    alarm5min: '5 分鐘前',
+    alarm15min: '15 分鐘前',
+    alarm30min: '30 分鐘前',
+    alarm1hr: '1 小時前',
+    alarm2hr: '2 小時前',
+    alarm1day: '1 日前',
+    alarm2day: '2 日前',
+    alarm1week: '1 星期前',
     recNone: '不重複', recDaily: '每日', recWeekly: '每週',
     recFortnightly: '兩週一次',
     recMonthly: '每月', recQuarterly: '每季', recYearly: '每年',
@@ -998,7 +1027,7 @@ const I18N = {
     syncQueued: '離線 — 已排隊', syncNoUrl: '未設網址 — 已排隊',
 
     untitled: '(未命名)', never: '從未',
-    pJess: 'Jessica', pAmus: 'Amus', pMum: '媽媽', pHouse: '家庭',
+    pJess: 'Jessica', pAmus: 'Amus', pMum: '媽媽', pDad: '爸爸', pHouse: '家庭',
     pMilk: '牛奶', pBb: 'BB', pCilla: 'Cilla',
     months: ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
     weekdaysFull: ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'],
@@ -1037,7 +1066,7 @@ function MONTHS()        { return I18N[state.lang || getLang()].months; }
 function WEEKDAYS_FULL() { return I18N[state.lang || getLang()].weekdaysFull; }
 function personName(id) {
   if (!id) return '';
-  const map = { jess:'pJess', amus:'pAmus', mum:'pMum', house:'pHouse', milk:'pMilk', bb:'pBb', cilla:'pCilla' };
+  const map = { jess:'pJess', amus:'pAmus', mum:'pMum', dad:'pDad', house:'pHouse', milk:'pMilk', bb:'pBb', cilla:'pCilla' };
   return t(map[id] || '') || (PERSON_BY_ID[id] && PERSON_BY_ID[id].name) || '';
 }
 
@@ -1543,6 +1572,27 @@ function renderCreate() {
         </div>
       </div>` : ''}
       <div class="field">
+        <div class="checkbox-row">
+          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <span>${escapeHtml(t('fSyncToIos'))}</span>
+        </div>
+      </div>
+      <div class="field" id="cf-alarm-wrap" style="display:none">
+        <label>${escapeHtml(t('fAlarm'))}</label>
+        <select id="cf-alarm">
+          <option value="">${escapeHtml(t('alarmNone'))}</option>
+          <option value="0">${escapeHtml(t('alarmAtTime'))}</option>
+          <option value="5">${escapeHtml(t('alarm5min'))}</option>
+          <option value="15">${escapeHtml(t('alarm15min'))}</option>
+          <option value="30">${escapeHtml(t('alarm30min'))}</option>
+          <option value="60">${escapeHtml(t('alarm1hr'))}</option>
+          <option value="120">${escapeHtml(t('alarm2hr'))}</option>
+          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
+          <option value="10080">${escapeHtml(t('alarm1week'))}</option>
+        </select>
+      </div>
+      <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
         <textarea id="cf-notes"></textarea>
       </div>
@@ -1579,6 +1629,21 @@ function renderCreate() {
       <div class="field" id="cf-until-wrap" style="display:none">
         <label>${escapeHtml(t('fRecurUntil'))}</label>
         <input type="date" id="cf-recur-until">
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <span>${escapeHtml(t('fSyncToIos'))}</span>
+        </div>
+      </div>
+      <div class="field" id="cf-alarm-wrap" style="display:none">
+        <label>${escapeHtml(t('fAlarm'))}</label>
+        <select id="cf-alarm">
+          <option value="">${escapeHtml(t('alarmNone'))}</option>
+          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
+          <option value="10080">${escapeHtml(t('alarm1week'))}</option>
+        </select>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
@@ -1748,6 +1813,27 @@ function renderModal() {
             </div>
           </div>` : ''}
           <div class="field">
+            <div class="checkbox-row">
+              <input type="checkbox" id="f-sync-ios" ${truthy(ev.sync_to_ios)?'checked':''} onchange="onModalSyncIosChange()">
+              <span>${escapeHtml(t('fSyncToIos'))}</span>
+            </div>
+          </div>
+          <div class="field" id="f-alarm-wrap" style="display:${truthy(ev.sync_to_ios)?'block':'none'}">
+            <label>${escapeHtml(t('fAlarm'))}</label>
+            <select id="f-alarm">
+              <option value="" ${!ev.alarm_minutes&&ev.alarm_minutes!==0?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+              <option value="0" ${String(ev.alarm_minutes)==='0'?'selected':''}>${escapeHtml(t('alarmAtTime'))}</option>
+              <option value="5" ${String(ev.alarm_minutes)==='5'?'selected':''}>${escapeHtml(t('alarm5min'))}</option>
+              <option value="15" ${String(ev.alarm_minutes)==='15'?'selected':''}>${escapeHtml(t('alarm15min'))}</option>
+              <option value="30" ${String(ev.alarm_minutes)==='30'?'selected':''}>${escapeHtml(t('alarm30min'))}</option>
+              <option value="60" ${String(ev.alarm_minutes)==='60'?'selected':''}>${escapeHtml(t('alarm1hr'))}</option>
+              <option value="120" ${String(ev.alarm_minutes)==='120'?'selected':''}>${escapeHtml(t('alarm2hr'))}</option>
+              <option value="1440" ${String(ev.alarm_minutes)==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+              <option value="2880" ${String(ev.alarm_minutes)==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
+              <option value="10080" ${String(ev.alarm_minutes)==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
+            </select>
+          </div>
+          <div class="field">
             <label>${escapeHtml(t('fNotesOpt'))}</label>
             <textarea id="f-notes">${escapeHtml(ev.notes||'')}</textarea>
           </div>
@@ -1802,6 +1888,21 @@ function renderModal() {
               <input type="checkbox" id="f-paid" ${truthy(b.paid)?'checked':''}>
               <span>${escapeHtml(t('fPaid'))}</span>
             </div>
+          </div>
+          <div class="field">
+            <div class="checkbox-row">
+              <input type="checkbox" id="f-sync-ios" ${truthy(b.sync_to_ios)?'checked':''} onchange="onModalSyncIosChange()">
+              <span>${escapeHtml(t('fSyncToIos'))}</span>
+            </div>
+          </div>
+          <div class="field" id="f-alarm-wrap" style="display:${truthy(b.sync_to_ios)?'block':'none'}">
+            <label>${escapeHtml(t('fAlarm'))}</label>
+            <select id="f-alarm">
+              <option value="" ${!b.alarm_minutes&&b.alarm_minutes!==0?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+              <option value="1440" ${String(b.alarm_minutes)==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+              <option value="2880" ${String(b.alarm_minutes)==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
+              <option value="10080" ${String(b.alarm_minutes)==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
+            </select>
           </div>
           <div class="field">
             <label>${escapeHtml(t('fNotesOpt'))}</label>
@@ -1914,6 +2015,16 @@ function onModalRecurChange() {
   const sel = document.getElementById('f-recurring');
   const wrap = document.getElementById('f-until-wrap');
   if (sel && wrap) wrap.style.display = (sel.value && sel.value !== 'none') ? 'block' : 'none';
+}
+function onSyncIosChange() {
+  const cb = document.getElementById('cf-sync-ios');
+  const wrap = document.getElementById('cf-alarm-wrap');
+  if (cb && wrap) wrap.style.display = cb.checked ? 'block' : 'none';
+}
+function onModalSyncIosChange() {
+  const cb = document.getElementById('f-sync-ios');
+  const wrap = document.getElementById('f-alarm-wrap');
+  if (cb && wrap) wrap.style.display = cb.checked ? 'block' : 'none';
 }
 
 function goToCreate(kind, date) {
@@ -2049,13 +2160,17 @@ async function submitCreate(kind) {
     const notes = document.getElementById('cf-notes').value.trim();
     const autoRollEl = document.getElementById('cf-auto-roll');
     const autoRoll = autoRollEl ? autoRollEl.checked : false;
+    const syncIos = document.getElementById('cf-sync-ios').checked;
+    const alarmRaw = document.getElementById('cf-alarm').value;
     const item = {
       title, date, time, assignee, notes,
       recurring,
       recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
       exceptions: '',
       done: kind === 'task' ? false : '',
-      auto_roll: autoRoll
+      auto_roll: autoRoll,
+      sync_to_ios: syncIos,
+      alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addEvent(item);
     toast(t('toastEventAdded'));
@@ -2065,12 +2180,16 @@ async function submitCreate(kind) {
     const recurUntilEl = document.getElementById('cf-recur-until');
     const recurUntil = recurUntilEl ? recurUntilEl.value : '';
     const notes = document.getElementById('cf-notes').value.trim();
+    const syncIos = document.getElementById('cf-sync-ios').checked;
+    const alarmRaw = document.getElementById('cf-alarm').value;
     const item = {
       title, amount, date, assignee, notes,
       recurring,
       recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
       exceptions: '',
-      paid: false
+      paid: false,
+      sync_to_ios: syncIos,
+      alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addBill(item);
     toast(t('toastBillAdded'));
@@ -2094,12 +2213,16 @@ async function saveEvent(existingId, isTask) {
   const recurUntil = recurUntilEl ? recurUntilEl.value : '';
   const notes = document.getElementById('f-notes').value.trim();
   const assignee = getPickedChip('f-assignee');
+  const syncIos = document.getElementById('f-sync-ios').checked;
+  const alarmRaw = document.getElementById('f-alarm').value;
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
     title, date, time, notes, assignee,
     recurring,
-    recur_until: (recurring && recurring !== 'none') ? recurUntil : ''
+    recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
+    sync_to_ios: syncIos,
+    alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
   };
   if (isTask) {
     const autoRollEl = document.getElementById('f-auto-roll');
@@ -2126,12 +2249,16 @@ async function saveBill(existingId) {
   const paid = document.getElementById('f-paid').checked;
   const notes = document.getElementById('f-notes').value.trim();
   const assignee = getPickedChip('f-assignee');
+  const syncIos = document.getElementById('f-sync-ios').checked;
+  const alarmRaw = document.getElementById('f-alarm').value;
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
     title, amount, date, recurring,
     recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
-    paid, notes, assignee
+    paid, notes, assignee,
+    sync_to_ios: syncIos,
+    alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
   };
   state.modal = null;
   render();
