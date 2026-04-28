@@ -224,6 +224,26 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 .sync-pill.err .dot { background: var(--warn); }
 @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
 
+.sync-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+  gap: 8px;
+}
+.sync-row .sync-pill {
+  margin-bottom: 0;
+}
+.version-tag {
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
 /* ---------- Tab bar ---------- */
 .tabbar {
   display: flex;
@@ -798,6 +818,10 @@ const PEOPLE = [
   { id: 'cilla', name: 'Cilla',   cls: 'cilla', pet: true }
 ];
 const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
+
+// App version — bump this whenever pushing a new build so you can verify what's loaded.
+// Shows in the sync pill area as a tiny grey label.
+const APP_VERSION = 'v10 · 2026-04-28';
 
 // ----- i18n -----
 const I18N = {
@@ -1380,7 +1404,12 @@ function renderSyncPill() {
   if (!host) return;
   const cls = state.syncStatus;
   const msg = state.syncMsg || (cls==='idle' ? 'Not connected' : '');
-  host.innerHTML = `<div class="sync-pill ${cls}"><span class="dot"></span>${escapeHtml(msg)}</div>`;
+  host.innerHTML = `
+    <div class="sync-row">
+      <div class="sync-pill ${cls}"><span class="dot"></span>${escapeHtml(msg)}</div>
+      <div class="version-tag">${escapeHtml(APP_VERSION)}</div>
+    </div>
+  `;
 }
 
 // ----- Render: Calendar -----
