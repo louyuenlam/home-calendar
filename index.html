@@ -958,7 +958,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v17 · 2026-04-29';
+const APP_VERSION = 'v19 · 2026-04-29';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1352,8 +1352,9 @@ function personName(id) {
 const state = {
   tab: 'calendar',          // 'calendar' | 'create' | 'settings'
   calMode: 'events',        // 'events' | 'bills'
-  createKind: 'event',      // 'event' | 'task' | 'bill'
+  createKind: 'event',      // 'event' | 'task' | 'bill' | 'travel'
   createPrefilledDate: null,
+  createDraft: {},          // Snapshotted values from the Create form so a re-render doesn't wipe input
   viewMonth: null,
   selectedDate: null,
   events: [],
@@ -1415,6 +1416,8 @@ function formatTimezoneLabel(tz) {
   return city + ' (' + region + ')';
 }
 function openTzPicker(side, mode) {
+  // Snapshot the create form (if active) so reopening it after picker close doesn't wipe input
+  if (state.tab === 'create') snapshotCreateDraft();
   // Stash the current modal so we can restore (e.g. when editing and picker is opened over an editTravel modal)
   const prev = state.modal;
   state.modal = { type: 'tzPicker', side, mode: mode || 'create', prev };
@@ -1941,125 +1944,131 @@ function renderCreate() {
   if (kind === 'event' || kind === 'task') {
     const recurOpts = ['none','daily','weekly','fortnightly','monthly','yearly'];
     const recurLabels = { none: t('recNone'), daily: t('recDaily'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), monthly: t('recMonthly'), yearly: t('recYearly') };
+    const dRecur = draftVal('cf-recurring','none');
+    const dSync  = draftChecked('cf-sync-ios');
+    const dAlarm = draftVal('cf-alarm','');
     form = `
       <div class="field">
         <label>${escapeHtml(t('fTitle'))}</label>
-        <input type="text" id="cf-title" autofocus>
+        <input type="text" id="cf-title" value="${escapeAttr(draftVal('cf-title',''))}" autofocus>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fDate'))}</label>
-        <input type="date" id="cf-date" value="${escapeAttr(prefilledDate)}">
+        <input type="date" id="cf-date" value="${escapeAttr(draftVal('cf-date', prefilledDate))}">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fStartOpt'))}</label>
-        <input type="time" id="cf-time">
+        <input type="time" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fEndOpt'))}</label>
-        <input type="time" id="cf-end-time">
+        <input type="time" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fRecurring'))}</label>
         <select id="cf-recurring" onchange="onRecurChange()">
-          ${recurOpts.map(o => `<option value="${o}">${escapeHtml(recurLabels[o])}</option>`).join('')}
+          ${recurOpts.map(o => `<option value="${o}" ${o === dRecur ? 'selected' : ''}>${escapeHtml(recurLabels[o])}</option>`).join('')}
         </select>
       </div>
-      <div class="field" id="cf-until-wrap" style="display:none">
+      <div class="field" id="cf-until-wrap" style="display:${dRecur && dRecur !== 'none' ? 'block' : 'none'}">
         <label>${escapeHtml(t('fRecurUntil'))}</label>
-        <input type="date" id="cf-recur-until">
+        <input type="date" id="cf-recur-until" value="${escapeAttr(draftVal('cf-recur-until',''))}">
       </div>
       ${kind === 'task' ? `
       <div class="field">
         <div class="checkbox-row">
-          <input type="checkbox" id="cf-auto-roll">
+          <input type="checkbox" id="cf-auto-roll" ${draftChecked('cf-auto-roll') ? 'checked' : ''}>
           <span>${escapeHtml(t('fAutoRoll'))}</span>
         </div>
       </div>` : ''}
       <div class="field">
         <div class="checkbox-row">
-          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <input type="checkbox" id="cf-sync-ios" ${dSync ? 'checked' : ''} onchange="onSyncIosChange()">
           <span>${escapeHtml(t('fSyncToIos'))}</span>
         </div>
       </div>
-      <div class="field" id="cf-alarm-wrap" style="display:none">
+      <div class="field" id="cf-alarm-wrap" style="display:${dSync ? 'block' : 'none'}">
         <label>${escapeHtml(t('fAlarm'))}</label>
         <select id="cf-alarm">
-          <option value="">${escapeHtml(t('alarmNone'))}</option>
-          <option value="0">${escapeHtml(t('alarmAtTime'))}</option>
-          <option value="5">${escapeHtml(t('alarm5min'))}</option>
-          <option value="15">${escapeHtml(t('alarm15min'))}</option>
-          <option value="30">${escapeHtml(t('alarm30min'))}</option>
-          <option value="60">${escapeHtml(t('alarm1hr'))}</option>
-          <option value="120">${escapeHtml(t('alarm2hr'))}</option>
-          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
-          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
-          <option value="10080">${escapeHtml(t('alarm1week'))}</option>
+          <option value="" ${dAlarm===''?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+          <option value="0" ${dAlarm==='0'?'selected':''}>${escapeHtml(t('alarmAtTime'))}</option>
+          <option value="5" ${dAlarm==='5'?'selected':''}>${escapeHtml(t('alarm5min'))}</option>
+          <option value="15" ${dAlarm==='15'?'selected':''}>${escapeHtml(t('alarm15min'))}</option>
+          <option value="30" ${dAlarm==='30'?'selected':''}>${escapeHtml(t('alarm30min'))}</option>
+          <option value="60" ${dAlarm==='60'?'selected':''}>${escapeHtml(t('alarm1hr'))}</option>
+          <option value="120" ${dAlarm==='120'?'selected':''}>${escapeHtml(t('alarm2hr'))}</option>
+          <option value="1440" ${dAlarm==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880" ${dAlarm==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
+          <option value="10080" ${dAlarm==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
         </select>
       </div>
-      ${renderRecipientsBlock('cf', [])}
+      ${renderRecipientsBlockWithDraft('cf', dSync)}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
-        <textarea id="cf-notes"></textarea>
+        <textarea id="cf-notes">${escapeHtml(draftVal('cf-notes',''))}</textarea>
       </div>
       <button class="btn primary full" onclick="submitCreate('${kind}')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
   } else if (kind === 'bill') {
     const recurOpts = ['none','weekly','fortnightly','monthly','quarterly','yearly'];
     const recurLabels = { none: t('recNone'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), monthly: t('recMonthly'), quarterly: t('recQuarterly'), yearly: t('recYearly') };
+    const dRecur = draftVal('cf-recurring','none');
+    const dSync  = draftChecked('cf-sync-ios');
+    const dAlarm = draftVal('cf-alarm','');
     form = `
       <div class="field">
         <label>${escapeHtml(t('fTitle'))}</label>
-        <input type="text" id="cf-title" autofocus>
+        <input type="text" id="cf-title" value="${escapeAttr(draftVal('cf-title',''))}" autofocus>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fAmount'))}</label>
-        <input type="number" step="0.01" id="cf-amount">
+        <input type="number" step="0.01" id="cf-amount" value="${escapeAttr(draftVal('cf-amount',''))}">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fDueDate'))}</label>
-        <input type="date" id="cf-date" value="${escapeAttr(prefilledDate)}">
+        <input type="date" id="cf-date" value="${escapeAttr(draftVal('cf-date', prefilledDate))}">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fWhoPays'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fRecurring'))}</label>
         <select id="cf-recurring" onchange="onRecurChange()">
-          ${recurOpts.map(o => `<option value="${o}">${escapeHtml(recurLabels[o])}</option>`).join('')}
+          ${recurOpts.map(o => `<option value="${o}" ${o === dRecur ? 'selected' : ''}>${escapeHtml(recurLabels[o])}</option>`).join('')}
         </select>
       </div>
-      <div class="field" id="cf-until-wrap" style="display:none">
+      <div class="field" id="cf-until-wrap" style="display:${dRecur && dRecur !== 'none' ? 'block' : 'none'}">
         <label>${escapeHtml(t('fRecurUntil'))}</label>
-        <input type="date" id="cf-recur-until">
+        <input type="date" id="cf-recur-until" value="${escapeAttr(draftVal('cf-recur-until',''))}">
       </div>
       <div class="field">
         <div class="checkbox-row">
-          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <input type="checkbox" id="cf-sync-ios" ${dSync ? 'checked' : ''} onchange="onSyncIosChange()">
           <span>${escapeHtml(t('fSyncToIos'))}</span>
         </div>
       </div>
-      <div class="field" id="cf-alarm-wrap" style="display:none">
+      <div class="field" id="cf-alarm-wrap" style="display:${dSync ? 'block' : 'none'}">
         <label>${escapeHtml(t('fAlarm'))}</label>
         <select id="cf-alarm">
-          <option value="">${escapeHtml(t('alarmNone'))}</option>
-          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
-          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
-          <option value="10080">${escapeHtml(t('alarm1week'))}</option>
+          <option value="" ${dAlarm===''?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+          <option value="1440" ${dAlarm==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880" ${dAlarm==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
+          <option value="10080" ${dAlarm==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
         </select>
       </div>
-      ${renderRecipientsBlock('cf', [])}
+      ${renderRecipientsBlockWithDraft('cf', dSync)}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
-        <textarea id="cf-notes"></textarea>
+        <textarea id="cf-notes">${escapeHtml(draftVal('cf-notes',''))}</textarea>
       </div>
       <button class="btn primary full" onclick="submitCreate('bill')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
@@ -2069,15 +2078,17 @@ function renderCreate() {
     const tzToInitial   = state.createTzTo   || deviceTz;
     state.createTzFrom = tzFromInitial;
     state.createTzTo   = tzToInitial;
+    const dSync  = draftChecked('cf-sync-ios');
+    const dAlarm = draftVal('cf-alarm','');
     form = `
       <div class="field">
         <label>${escapeHtml(t('fTitle'))}</label>
-        <input type="text" id="cf-title" autofocus>
+        <input type="text" id="cf-title" value="${escapeAttr(draftVal('cf-title',''))}" autofocus>
       </div>
       <div class="field">
         <label>${escapeHtml(t('fTravelMethod'))}</label>
         <div class="chip-picker" id="cf-travel-method">
-          ${TRAVEL_METHODS.map(m => `<button type="button" data-val="${m.id}" onclick="pickChip(this)">${escapeHtml(t(m.labelKey))}</button>`).join('')}
+          ${TRAVEL_METHODS.map(m => `<button type="button" data-val="${m.id}" class="${draftHasChip('cf-travel-method', m.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(t(m.labelKey))}</button>`).join('')}
         </div>
       </div>
 
@@ -2085,15 +2096,15 @@ function renderCreate() {
         <div class="block-title">${escapeHtml(t('travelDeparture').replace(/^./, c => c.toUpperCase()))}</div>
         <div class="field">
           <label>${escapeHtml(t('fFromLocation'))}</label>
-          <input type="text" id="cf-from-location" placeholder="London">
+          <input type="text" id="cf-from-location" value="${escapeAttr(draftVal('cf-from-location',''))}" placeholder="London">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fDepartDate'))}</label>
-          <input type="date" id="cf-date" value="${escapeAttr(prefilledDate)}" onchange="onDepartureDateChange()">
+          <input type="date" id="cf-date" value="${escapeAttr(draftVal('cf-date', prefilledDate))}" onchange="onDepartureDateChange()">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fDepartTime'))}</label>
-          <input type="time" id="cf-time">
+          <input type="time" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fFromTz'))}</label>
@@ -2107,15 +2118,15 @@ function renderCreate() {
         <div class="block-title">${escapeHtml(t('travelArrival').replace(/^./, c => c.toUpperCase()))}</div>
         <div class="field">
           <label>${escapeHtml(t('fToLocation'))}</label>
-          <input type="text" id="cf-to-location" placeholder="New York">
+          <input type="text" id="cf-to-location" value="${escapeAttr(draftVal('cf-to-location',''))}" placeholder="New York">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fArriveDate'))}</label>
-          <input type="date" id="cf-end-date" value="${escapeAttr(prefilledDate)}">
+          <input type="date" id="cf-end-date" value="${escapeAttr(draftVal('cf-end-date', prefilledDate))}">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fArriveTime'))}</label>
-          <input type="time" id="cf-end-time">
+          <input type="time" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fToTz'))}</label>
@@ -2128,32 +2139,32 @@ function renderCreate() {
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
         <div class="checkbox-row">
-          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <input type="checkbox" id="cf-sync-ios" ${dSync ? 'checked' : ''} onchange="onSyncIosChange()">
           <span>${escapeHtml(t('fSyncToIos'))}</span>
         </div>
       </div>
-      <div class="field" id="cf-alarm-wrap" style="display:none">
+      <div class="field" id="cf-alarm-wrap" style="display:${dSync ? 'block' : 'none'}">
         <label>${escapeHtml(t('fAlarm'))}</label>
         <select id="cf-alarm">
-          <option value="">${escapeHtml(t('alarmNone'))}</option>
-          <option value="0">${escapeHtml(t('alarmAtTime'))}</option>
-          <option value="15">${escapeHtml(t('alarm15min'))}</option>
-          <option value="30">${escapeHtml(t('alarm30min'))}</option>
-          <option value="60">${escapeHtml(t('alarm1hr'))}</option>
-          <option value="120">${escapeHtml(t('alarm2hr'))}</option>
-          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
-          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
+          <option value="" ${dAlarm===''?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+          <option value="0" ${dAlarm==='0'?'selected':''}>${escapeHtml(t('alarmAtTime'))}</option>
+          <option value="15" ${dAlarm==='15'?'selected':''}>${escapeHtml(t('alarm15min'))}</option>
+          <option value="30" ${dAlarm==='30'?'selected':''}>${escapeHtml(t('alarm30min'))}</option>
+          <option value="60" ${dAlarm==='60'?'selected':''}>${escapeHtml(t('alarm1hr'))}</option>
+          <option value="120" ${dAlarm==='120'?'selected':''}>${escapeHtml(t('alarm2hr'))}</option>
+          <option value="1440" ${dAlarm==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880" ${dAlarm==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
         </select>
       </div>
-      ${renderRecipientsBlock('cf', [])}
+      ${renderRecipientsBlockWithDraft('cf', dSync)}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
-        <textarea id="cf-notes"></textarea>
+        <textarea id="cf-notes">${escapeHtml(draftVal('cf-notes',''))}</textarea>
       </div>
       <button class="btn primary full" onclick="submitCreate('travel')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
@@ -2747,15 +2758,72 @@ function rerenderActive() {
   render();
 }
 
+// Snapshot all currently-typed values from the Create form into state.createDraft.
+// Call this BEFORE any render() that might rebuild the create form (e.g. timezone picker close).
+// The form templates check state.createDraft for restored values.
+function snapshotCreateDraft() {
+  if (state.tab !== 'create') return;
+  const get = id => {
+    const el = document.getElementById(id);
+    return el ? (el.type === 'checkbox' ? el.checked : el.value) : undefined;
+  };
+  const draft = {};
+  // Common across all kinds
+  ['cf-title','cf-date','cf-time','cf-end-time','cf-end-date','cf-amount',
+   'cf-from-location','cf-to-location','cf-recurring','cf-recur-until',
+   'cf-notes','cf-alarm'].forEach(id => {
+    const v = get(id);
+    if (v !== undefined) draft[id] = v;
+  });
+  ['cf-sync-ios','cf-auto-roll'].forEach(id => {
+    const v = get(id);
+    if (v !== undefined) draft[id] = v;
+  });
+  // Picked chips
+  const chipPickerIds = ['cf-assignee','cf-travel-method','cf-recipients'];
+  chipPickerIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const active = Array.from(el.querySelectorAll('button.active')).map(b => b.dataset.val);
+    draft[id] = active;
+  });
+  state.createDraft = draft;
+}
+function clearCreateDraft() {
+  state.createDraft = {};
+}
+function draftVal(id, fallback) {
+  const d = state.createDraft || {};
+  return (id in d) ? d[id] : (fallback === undefined ? '' : fallback);
+}
+function draftChecked(id) {
+  const d = state.createDraft || {};
+  return !!d[id];
+}
+function draftHasChip(pickerId, val) {
+  const d = state.createDraft || {};
+  const arr = Array.isArray(d[pickerId]) ? d[pickerId] : null;
+  return arr ? arr.indexOf(val) >= 0 : false;
+}
+
 // ----- Tab/calendar actions -----
 function setTab(tab) {
+  // Leaving the create tab → drop the draft so re-entering starts fresh
+  if (state.tab === 'create' && tab !== 'create') {
+    clearCreateDraft();
+  }
   state.tab = tab;
   if (tab === 'calendar' && !state.selectedDate) state.selectedDate = todayKey();
   if (tab !== 'create') state.createPrefilledDate = null;
   render();
 }
 function setCalMode(mode) { state.calMode = mode; render(); }
-function setCreateKind(kind) { state.createKind = kind; render(); }
+function setCreateKind(kind) {
+  // Save current input before rebuilding the form for a different kind
+  snapshotCreateDraft();
+  state.createKind = kind;
+  render();
+}
 function navMonth(delta) {
   const vm = state.viewMonth || new Date();
   state.viewMonth = new Date(vm.getFullYear(), vm.getMonth() + delta, 1);
@@ -2823,6 +2891,22 @@ function renderRecipientsBlock(prefix, preselected) {
       <label>${escapeHtml(t('fSendTo'))}</label>
       <div class="chip-picker" id="${pickerId}">
         ${humans.map(p => `<button type="button" data-val="${p.id}" class="${sel.has(p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Same as renderRecipientsBlock but uses createDraft for restored values + visibility
+function renderRecipientsBlockWithDraft(prefix, syncIosChecked) {
+  const wrapId = prefix + '-recipients-wrap';
+  const pickerId = prefix + '-recipients';
+  const humans = PEOPLE.filter(p => !p.pet);
+  const display = syncIosChecked ? 'block' : 'none';
+  return `
+    <div class="field" id="${wrapId}" style="display:${display}">
+      <label>${escapeHtml(t('fSendTo'))}</label>
+      <div class="chip-picker" id="${pickerId}">
+        ${humans.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip(pickerId, p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
       </div>
     </div>
   `;
@@ -3012,7 +3096,7 @@ async function submitCreate(kind) {
     await submitCreateInner(kind, title, date, assignee);
   } catch (err) {
     console.error('[CREATE] failed:', err);
-    toast(t('toastEventAdded')); // fallback toast even on failure
+    toast(t('toastSaveFailed'));
   } finally {
     state.saving = false;
     rerenderActive();
@@ -3020,6 +3104,7 @@ async function submitCreate(kind) {
 }
 
 async function submitCreateInner(kind, title, date, assignee) {
+  let toastMsg = '';
   if (kind === 'event' || kind === 'task') {
     const time = document.getElementById('cf-time').value;
     const endTime = document.getElementById('cf-end-time').value;
@@ -3044,7 +3129,7 @@ async function submitCreateInner(kind, title, date, assignee) {
       alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addEvent(item);
-    toast(t('toastEventAdded'));
+    toastMsg = t('toastEventAdded');
   } else if (kind === 'bill') {
     const amount = parseFloat(document.getElementById('cf-amount').value) || 0;
     const recurring = document.getElementById('cf-recurring').value;
@@ -3065,7 +3150,7 @@ async function submitCreateInner(kind, title, date, assignee) {
       alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addBill(item);
-    toast(t('toastBillAdded'));
+    toastMsg = t('toastBillAdded');
   } else if (kind === 'travel') {
     const time = document.getElementById('cf-time').value;
     const endTime = document.getElementById('cf-end-time').value;
@@ -3093,14 +3178,17 @@ async function submitCreateInner(kind, title, date, assignee) {
     };
     rememberTimezone(fromTz); rememberTimezone(toTz);
     await addEvent(item);
-    toast(t('toastEventAdded'));
+    toastMsg = t('toastEventAdded');
     state.createTzFrom = null; state.createTzTo = null;
   }
   state.tab = 'calendar';
   state.calMode = (kind === 'bill') ? 'bills' : 'events';
   state.selectedDate = date || todayKey();
   state.createPrefilledDate = null;
+  clearCreateDraft();
   render();
+  // Fire toast AFTER render so the calendar view is in place when it appears
+  if (toastMsg) toast(toastMsg);
 }
 
 async function saveEvent(existingId, isTask) {
@@ -3370,17 +3458,29 @@ function wipeLocal() {
 
 // ----- Toast -----
 function toast(msg) {
-  const old = document.querySelector('.toast');
-  if (old) old.remove();
+  console.log('[TOAST]', msg);
+  // Use a dedicated persistent host so render() can never wipe it
+  let host = document.getElementById('toast-host');
+  if (!host) {
+    host = document.createElement('div');
+    host.id = 'toast-host';
+    document.body.appendChild(host);
+  }
+  // Remove any existing toast inside host
+  host.innerHTML = '';
   const el = document.createElement('div');
   el.className = 'toast';
   el.textContent = msg;
-  document.body.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('show'));
+  host.appendChild(el);
+  // Force layout, then add show class on next frame
+  void el.offsetWidth;
+  requestAnimationFrame(() => {
+    el.classList.add('show');
+  });
   setTimeout(() => {
     el.classList.remove('show');
-    setTimeout(() => el.remove(), 300);
-  }, 2200);
+    setTimeout(() => { if (el.parentElement) el.remove(); }, 350);
+  }, 3500);
 }
 
 // ----- Escape helpers -----
