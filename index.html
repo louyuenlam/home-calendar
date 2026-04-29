@@ -958,7 +958,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v19 · 2026-04-29';
+const APP_VERSION = 'v20 · 2026-04-29';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1146,6 +1146,7 @@ const I18N = {
     toastEventAdded: 'Event added', toastEventUpdated: 'Event updated', toastEventDeleted: 'Event deleted',
     toastBillAdded: 'Bill added', toastBillUpdated: 'Bill updated', toastBillDeleted: 'Bill deleted',
     toastSaveFailed: 'Save failed — try again',
+    toastInvalidTime: 'Invalid time — use HH:MM (e.g. 08:50)',
     toastPaid: 'Marked paid', toastUnpaid: 'Marked unpaid',
     toastDone: 'Marked done', toastUndone: 'Marked not done',
     toastRolledForward: 'Rolled to next date',
@@ -1289,6 +1290,7 @@ const I18N = {
     toastEventAdded: '已新增活動', toastEventUpdated: '已更新活動', toastEventDeleted: '已刪除活動',
     toastBillAdded: '已新增帳單', toastBillUpdated: '已更新帳單', toastBillDeleted: '已刪除帳單',
     toastSaveFailed: '儲存失敗 — 請再試',
+    toastInvalidTime: '時間格式錯誤 — 請輸入 HH:MM(例如 08:50)',
     toastPaid: '已標示為已付', toastUnpaid: '已標示為未付',
     toastDone: '已完成', toastUndone: '取消完成',
     toastRolledForward: '已延至下次',
@@ -1473,6 +1475,55 @@ function formatTimeForDisplay(v) {
   const m2 = s.match(/T(\d{2}):(\d{2})/);
   if (m2) return m2[1] + ':' + m2[2];
   return '';
+}
+
+// Auto-format a time-input as the user types: '0850' → '08:50', '8' → '8', '850' → '8:50'.
+// Designed for 24-hour entry. Pass the input element.
+function onTimeInputType(el) {
+  const cursorAtEnd = el.selectionStart === el.value.length;
+  let raw = el.value.replace(/[^0-9:]/g, '');
+  // Strip extra colons, keep only the first
+  const firstColon = raw.indexOf(':');
+  if (firstColon >= 0) {
+    raw = raw.slice(0, firstColon + 1) + raw.slice(firstColon + 1).replace(/:/g, '');
+  }
+  // Split into digits before and after colon
+  let digits = raw.replace(/:/g, '');
+  let formatted;
+  if (digits.length === 0) {
+    formatted = '';
+  } else if (digits.length === 1) {
+    formatted = digits;
+  } else if (digits.length === 2) {
+    // If user has typed a literal colon already, respect it (e.g. they typed '8:' and want HH=8)
+    if (raw.indexOf(':') === 1) formatted = digits[0] + ':' + digits[1];
+    else formatted = digits + ':';
+  } else if (digits.length === 3) {
+    formatted = digits[0] + ':' + digits.slice(1);
+  } else {
+    formatted = digits.slice(0, 2) + ':' + digits.slice(2, 4);
+  }
+  if (formatted !== el.value) {
+    el.value = formatted;
+    // Keep cursor at end so typing continues naturally
+    if (cursorAtEnd) el.setSelectionRange(formatted.length, formatted.length);
+  }
+}
+
+// On blur, normalise to a valid HH:mm or empty (clears invalid input).
+function onTimeInputBlur(el) {
+  const v = el.value.trim();
+  if (!v) { el.value = ''; return; }
+  const m = v.match(/^(\d{1,2}):?(\d{0,2})$/);
+  if (!m) { el.value = ''; return; }
+  let hh = parseInt(m[1], 10);
+  let mm = m[2] ? parseInt(m[2], 10) : 0;
+  if (isNaN(hh) || hh < 0 || hh > 23 || isNaN(mm) || mm < 0 || mm > 59) {
+    el.value = '';
+    toast(t('toastInvalidTime'));
+    return;
+  }
+  el.value = (hh < 10 ? '0' + hh : '' + hh) + ':' + (mm < 10 ? '0' + mm : '' + mm);
 }
 
 // Roll a date string forward by recurrence interval
@@ -1958,11 +2009,11 @@ function renderCreate() {
       </div>
       <div class="field">
         <label>${escapeHtml(t('fStartOpt'))}</label>
-        <input type="time" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}">
+        <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fEndOpt'))}</label>
-        <input type="time" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}">
+        <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
@@ -2104,7 +2155,7 @@ function renderCreate() {
         </div>
         <div class="field">
           <label>${escapeHtml(t('fDepartTime'))}</label>
-          <input type="time" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}">
+          <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="cf-time" value="${escapeAttr(draftVal('cf-time',''))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fFromTz'))}</label>
@@ -2126,7 +2177,7 @@ function renderCreate() {
         </div>
         <div class="field">
           <label>${escapeHtml(t('fArriveTime'))}</label>
-          <input type="time" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}">
+          <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="cf-end-time" value="${escapeAttr(draftVal('cf-end-time',''))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
         </div>
         <div class="field">
           <label>${escapeHtml(t('fToTz'))}</label>
@@ -2410,11 +2461,11 @@ function renderModal() {
           </div>
           <div class="field">
             <label>${escapeHtml(t('fStartOpt'))}</label>
-            <input type="time" id="f-time" value="${escapeAttr(ev.time||'')}">
+            <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="f-time" value="${escapeAttr(formatTimeForDisplay(ev.time))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
           </div>
           <div class="field">
             <label>${escapeHtml(t('fEndOpt'))}</label>
-            <input type="time" id="f-end-time" value="${escapeAttr(ev.end_time||'')}">
+            <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="f-end-time" value="${escapeAttr(formatTimeForDisplay(ev.end_time))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
           </div>
           <div class="field">
             <label>${escapeHtml(t('fWho'))}</label>
@@ -2584,7 +2635,7 @@ function renderModal() {
             </div>
             <div class="field">
               <label>${escapeHtml(t('fDepartTime'))}</label>
-              <input type="time" id="f-time" value="${escapeAttr(formatTimeForDisplay(it.time))}">
+              <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="f-time" value="${escapeAttr(formatTimeForDisplay(it.time))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
             </div>
             <div class="field">
               <label>${escapeHtml(t('fFromTz'))}</label>
@@ -2606,7 +2657,7 @@ function renderModal() {
             </div>
             <div class="field">
               <label>${escapeHtml(t('fArriveTime'))}</label>
-              <input type="time" id="f-end-time" value="${escapeAttr(formatTimeForDisplay(it.end_time))}">
+              <input type="text" inputmode="numeric" maxlength="5" placeholder="HH:MM" id="f-end-time" value="${escapeAttr(formatTimeForDisplay(it.end_time))}" oninput="onTimeInputType(this)" onblur="onTimeInputBlur(this)">
             </div>
             <div class="field">
               <label>${escapeHtml(t('fToTz'))}</label>
