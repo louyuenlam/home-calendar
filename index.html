@@ -581,6 +581,81 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 }
 .add-btn:active { background: var(--accent-tint); }
 
+/* ---------- Timezone picker ---------- */
+.tz-button {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+  font-size: 14px;
+  text-align: left;
+  min-height: 44px;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.tz-button:active { background: var(--cream-soft); }
+.tz-button .placeholder { color: var(--muted); }
+.tz-list {
+  max-height: 50vh;
+  overflow-y: auto;
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+  padding: 4px;
+}
+.tz-list .tz-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--ink);
+  background: transparent;
+}
+.tz-list .tz-item:active,
+.tz-list .tz-item.active { background: var(--accent-tint); color: var(--accent-dark); }
+.tz-list .tz-section {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding: 6px 10px 4px;
+}
+.tz-list .tz-empty {
+  padding: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* ---------- Travel block ---------- */
+.travel-block {
+  background: var(--cream-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+.travel-block .block-title {
+  font-family: 'Fraunces', serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  color: var(--accent-dark);
+  margin-bottom: 8px;
+}
+
+.travel-row .item-meta svg {
+  vertical-align: -2px;
+  margin-right: 3px;
+}
+
 /* ---------- Modal ---------- */
 .backdrop {
   position: fixed;
@@ -821,7 +896,66 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v11 · 2026-04-29';
+const APP_VERSION = 'v14 · 2026-04-29';
+
+// Travel methods + their inline SVG icon (monochrome, scales with text colour)
+const TRAVEL_METHODS = [
+  { id: 'plane',  labelKey: 'methodPlane' },
+  { id: 'train',  labelKey: 'methodTrain' },
+  { id: 'drive',  labelKey: 'methodDrive' },
+  { id: 'bus',    labelKey: 'methodBus' },
+  { id: 'ferry',  labelKey: 'methodFerry' },
+  { id: 'other',  labelKey: 'methodOther' }
+];
+function travelIconSvg(methodId) {
+  const common = 'width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:3px"';
+  switch (methodId) {
+    case 'plane':
+      return `<svg ${common}><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg>`;
+    case 'train':
+      return `<svg ${common}><rect x="4" y="3" width="16" height="14" rx="3"/><line x1="4" y1="11" x2="20" y2="11"/><line x1="8" y1="15" x2="8.01" y2="15"/><line x1="16" y1="15" x2="16.01" y2="15"/><path d="m6 21 2-3"/><path d="m18 21-2-3"/></svg>`;
+    case 'drive': case 'car':
+      return `<svg ${common}><path d="M14 16H9m10 0h3v-3.15a1 1 0 0 0-.84-.99L16 11l-2.7-3.6a1 1 0 0 0-.8-.4H5.24a2 2 0 0 0-1.8 1.1l-.8 1.63A6 6 0 0 0 2 12.42V16h2"/><circle cx="6.5" cy="16.5" r="2.5"/><circle cx="16.5" cy="16.5" r="2.5"/></svg>`;
+    case 'bus':
+      return `<svg ${common}><path d="M8 6v6"/><path d="M16 6v6"/><path d="M2 12h20"/><path d="M18 18h2a1 1 0 0 0 1-1V8a3 3 0 0 0-3-3H6a3 3 0 0 0-3 3v9a1 1 0 0 0 1 1h2"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/></svg>`;
+    case 'ferry': case 'boat':
+      return `<svg ${common}><path d="M2 21c.6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1 .6.5 1.2 1 2.5 1 2.5 0 2.5-2 5-2 1.3 0 1.9.5 2.5 1"/><path d="M19.38 20A11.6 11.6 0 0 0 21 14l-9-4-9 4c0 2.9.94 5.34 2.81 7.76"/><path d="M19 13V7a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v6"/><path d="M12 10v4"/><path d="M12 2v3"/></svg>`;
+    default:
+      return '';
+  }
+}
+
+// Common timezones — appears at top of search; full IANA list comes from the browser
+const COMMON_TIMEZONES = [
+  'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Madrid', 'Europe/Rome',
+  'America/New_York', 'America/Los_Angeles', 'America/Chicago', 'America/Toronto',
+  'Asia/Hong_Kong', 'Asia/Tokyo', 'Asia/Singapore', 'Asia/Shanghai', 'Asia/Dubai',
+  'Asia/Bangkok', 'Asia/Seoul', 'Australia/Sydney', 'Australia/Melbourne',
+  'Pacific/Auckland'
+];
+function getDeviceTimezone() {
+  try { return Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/London'; }
+  catch { return 'Europe/London'; }
+}
+function getAllTimezones() {
+  try {
+    if (typeof Intl.supportedValuesOf === 'function') {
+      return Intl.supportedValuesOf('timeZone');
+    }
+  } catch {}
+  return COMMON_TIMEZONES;
+}
+
+// Persist last-used timezones in localStorage
+const TZ_RECENT_KEY = 'familyCalRecentTz_v1';
+function getRecentTimezones() { return lsGet(TZ_RECENT_KEY, []); }
+function rememberTimezone(tz) {
+  if (!tz) return;
+  let recent = getRecentTimezones().filter(x => x !== tz);
+  recent.unshift(tz);
+  recent = recent.slice(0, 5);
+  lsSet(TZ_RECENT_KEY, recent);
+}
 
 // ----- i18n -----
 const I18N = {
@@ -835,7 +969,7 @@ const I18N = {
     // Create tab
     createTitle1: 'Create', createTitle2: ' something',
     createSubtitle: 'Pick what to add, then fill in the details.',
-    kindEvent: 'Event', kindTask: 'Task', kindBill: 'Bill',
+    kindEvent: 'Event', kindTask: 'Task', kindBill: 'Bill', kindTravel: 'Travel',
     createBtn: 'Create',
 
     // Form labels
@@ -844,6 +978,28 @@ const I18N = {
     fDateOpt: 'Date (optional)',
     fDueDate: 'Due date',
     fTimeOpt: 'Time (optional)',
+    fStartOpt: 'Start (optional)',
+    fEndOpt: 'End (optional)',
+    fFromLocation: 'From',
+    fToLocation: 'To',
+    fFromTz: 'Timezone (departure)',
+    fToTz: 'Timezone (arrival)',
+    fDepartDate: 'Departure date',
+    fArriveDate: 'Arrival date',
+    fDepartTime: 'Departure time',
+    fArriveTime: 'Arrival time',
+    fTravelMethod: 'Method',
+    methodPlane: 'Plane',
+    methodTrain: 'Train',
+    methodDrive: 'Drive',
+    methodBus: 'Bus',
+    methodFerry: 'Ferry',
+    methodOther: 'Other',
+    travelDeparture: 'departure',
+    travelArrival: 'arrival',
+    tzPickerSearch: 'Search timezone…',
+    tzPickerNoResults: 'No matches',
+    tzCurrent: 'Current device',
     fWho: "Who's it for",
     fWhoPays: 'Who pays',
     fAmount: 'Amount (£)',
@@ -873,6 +1029,7 @@ const I18N = {
     editEvent1: 'Edit', editEvent2: ' event',
     editTask1: 'Edit', editTask2: ' task',
     editBill1: 'Edit', editBill2: ' bill',
+    editTravel1: 'Edit', editTravel2: ' travel',
     save: 'Save', cancel: 'Cancel',
 
     // Recurring choice
@@ -955,7 +1112,7 @@ const I18N = {
 
     createTitle1: '新增', createTitle2: '項目',
     createSubtitle: '選擇要新增的類型,然後填寫資料。',
-    kindEvent: '活動', kindTask: '待辦', kindBill: '帳單',
+    kindEvent: '活動', kindTask: '待辦', kindBill: '帳單', kindTravel: '旅程',
     createBtn: '建立',
 
     fTitle: '標題',
@@ -963,6 +1120,28 @@ const I18N = {
     fDateOpt: '日期(可選)',
     fDueDate: '到期日',
     fTimeOpt: '時間(可選)',
+    fStartOpt: '開始(可選)',
+    fEndOpt: '結束(可選)',
+    fFromLocation: '出發地',
+    fToLocation: '目的地',
+    fFromTz: '時區(出發)',
+    fToTz: '時區(抵達)',
+    fDepartDate: '出發日期',
+    fArriveDate: '抵達日期',
+    fDepartTime: '出發時間',
+    fArriveTime: '抵達時間',
+    fTravelMethod: '交通方式',
+    methodPlane: '飛機',
+    methodTrain: '火車',
+    methodDrive: '駕駛',
+    methodBus: '巴士',
+    methodFerry: '渡輪',
+    methodOther: '其他',
+    travelDeparture: '出發',
+    travelArrival: '抵達',
+    tzPickerSearch: '搜尋時區…',
+    tzPickerNoResults: '沒有結果',
+    tzCurrent: '本機時區',
     fWho: '為誰而設',
     fWhoPays: '由誰付款',
     fAmount: '金額(£)',
@@ -991,6 +1170,7 @@ const I18N = {
     editEvent1: '編輯', editEvent2: '活動',
     editTask1: '編輯', editTask2: '待辦',
     editBill1: '編輯', editBill2: '帳單',
+    editTravel1: '編輯', editTravel2: '旅程',
     save: '儲存', cancel: '取消',
 
     recurChoiceTitle: '這是重複項目',
@@ -1151,6 +1331,61 @@ function uid() {
 
 // Normalise time value coming back from Sheets into 'HH:mm' for display.
 // Handles plain 'HH:mm', ISO timestamps from old Sheets serialisation, etc.
+function formatTimezoneLabel(tz) {
+  if (!tz) return '';
+  // 'Europe/London' → 'London (Europe)'  /  'America/New_York' → 'New York (America)'
+  const [region, ...rest] = tz.split('/');
+  const city = rest.join('/').replace(/_/g, ' ');
+  if (!city) return tz;
+  return city + ' (' + region + ')';
+}
+function openTzPicker(side, mode) {
+  // Stash the current modal so we can restore (e.g. when editing and picker is opened over an editTravel modal)
+  const prev = state.modal;
+  state.modal = { type: 'tzPicker', side, mode: mode || 'create', prev };
+  state.tzPickerQuery = '';
+  render();
+}
+function selectTimezone(tz) {
+  const m = state.modal;
+  if (!m || m.type !== 'tzPicker') return;
+  const { side, mode, prev } = m;
+  state.tzPickerQuery = '';
+  if (mode === 'edit') {
+    if (side === 'from') state.editTzFrom = tz;
+    else if (side === 'to') state.editTzTo = tz;
+  } else {
+    if (side === 'from') state.createTzFrom = tz;
+    else if (side === 'to') state.createTzTo = tz;
+  }
+  rememberTimezone(tz);
+  // Restore previous modal (e.g. editTravel) so the user lands back on the form
+  state.modal = prev || null;
+  render();
+}
+function onTzSearchInput(v) {
+  state.tzPickerQuery = v;
+  // Just re-render the list without rebuilding the modal (preserves input focus)
+  const list = document.getElementById('tz-list');
+  if (!list) return;
+  const query = (v || '').trim().toLowerCase();
+  const all = getAllTimezones();
+  if (!query) { render(); return; }
+  const filtered = all.filter(z => z.toLowerCase().includes(query) || formatTimezoneLabel(z).toLowerCase().includes(query)).slice(0, 60);
+  list.innerHTML = filtered.length
+    ? filtered.map(z => `<button class="tz-item" onclick="selectTimezone('${escapeAttr(z)}')">${escapeHtml(formatTimezoneLabel(z))}</button>`).join('')
+    : `<div class="tz-empty">${escapeHtml(t('tzPickerNoResults'))}</div>`;
+}
+function onDepartureDateChange() {
+  // Default the arrival date to match departure if user hasn't set it
+  const dep = document.getElementById('cf-date');
+  const arr = document.getElementById('cf-end-date');
+  if (dep && arr && (!arr.value || arr.value < dep.value)) {
+    arr.value = dep.value;
+  }
+}
+
+// Normalise time value coming back from Sheets into 'HH:mm' for display.
 function formatTimeForDisplay(v) {
   if (v == null || v === '') return '';
   const s = String(v).trim();
@@ -1354,16 +1589,36 @@ function getExceptions(item) {
 
 function expandItemsByDate(items, fromKey, toKey) {
   const byDate = {};
+
+  function pushOn(dateKey, item, extras) {
+    if (dateKey < fromKey || dateKey > toKey) return;
+    (byDate[dateKey] = byDate[dateKey] || []).push({ ...item, _instanceDate: dateKey, ...(extras || {}) });
+  }
+
   items.forEach(it => {
     if (!it.date) return;
     const startKey = it.date;
     if (startKey > toKey) return;
+
+    // Travel: render two virtual entries (departure + arrival)
+    if (it.kind === 'travel') {
+      const endKey = it.end_date || it.date;
+      pushOn(startKey, it, { _travelLeg: 'departure', _isRecurringInstance: false });
+      if (endKey !== startKey) {
+        pushOn(endKey, it, { _travelLeg: 'arrival', _isRecurringInstance: false });
+      } else {
+        // Same-day: render arrival entry on the same date as well, so both lines show
+        pushOn(startKey, it, { _travelLeg: 'arrival', _isRecurringInstance: false });
+      }
+      return;
+    }
+
     const exceptions = getExceptions(it);
     const recurring = it.recurring;
 
     if (!recurring || recurring === 'none' || recurring === '') {
       if (startKey >= fromKey && !exceptions.includes(startKey)) {
-        (byDate[startKey] = byDate[startKey] || []).push({ ...it, _instanceDate: startKey, _isRecurringInstance: false });
+        pushOn(startKey, it, { _isRecurringInstance: false });
       }
       return;
     }
@@ -1373,7 +1628,7 @@ function expandItemsByDate(items, fromKey, toKey) {
     while (cursor <= toKey && safety < 800) {
       if (until && cursor > until) break;
       if (cursor >= fromKey && !exceptions.includes(cursor)) {
-        (byDate[cursor] = byDate[cursor] || []).push({ ...it, _instanceDate: cursor, _isRecurringInstance: true });
+        pushOn(cursor, it, { _isRecurringInstance: true });
       }
       const next = rollDate(cursor, recurring);
       if (!next || next <= cursor) break;
@@ -1517,8 +1772,38 @@ function renderCalendar() {
 function renderEventRow(ev) {
   const p = ev.assignee && PERSON_BY_ID[ev.assignee];
   const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
-  const cleanTime = formatTimeForDisplay(ev.time);
-  const time = cleanTime ? `<span>${escapeHtml(cleanTime)}</span>` : '';
+
+  // Travel leg rendering
+  if (ev.kind === 'travel' && ev._travelLeg) {
+    const isDep = ev._travelLeg === 'departure';
+    const time = formatTimeForDisplay(isDep ? ev.time : ev.end_time);
+    const loc = isDep ? (ev.from_location || '') : (ev.to_location || '');
+    const label = isDep ? t('travelDeparture') : t('travelArrival');
+    const icon = travelIconSvg(ev.travel_method);
+    const titleLine = ev.title ? escapeHtml(ev.title) : '';
+    const isInstance = false;
+    const dateForArgs = ev._instanceDate || ev.date || '';
+    return `
+      <div class="item-row travel-row">
+        <div class="item-main">
+          <div class="item-title">${titleLine || (loc ? escapeHtml(loc) : t('untitled'))}</div>
+          <div class="item-meta">${icon}${time ? `<span>${escapeHtml(time)}</span>` : ''}${loc && titleLine ? `<span>${escapeHtml(loc)}</span>` : ''}<span>${escapeHtml(label)}</span>${chip}</div>
+          ${ev.notes ? `<div class="item-meta">${escapeHtml(ev.notes)}</div>` : ''}
+        </div>
+        <div class="item-actions">
+          <button class="icon-btn" onclick="openEditFlow('events','${ev.id}','${dateForArgs}',${isInstance})">✎</button>
+          <button class="icon-btn warn" onclick="openDeleteFlow('events','${ev.id}','${dateForArgs}',${isInstance})">🗑</button>
+        </div>
+      </div>
+    `;
+  }
+
+  const startTime = formatTimeForDisplay(ev.time);
+  const endTime = formatTimeForDisplay(ev.end_time);
+  const timeText = startTime
+    ? (endTime ? `${startTime} → ${endTime}` : startTime)
+    : '';
+  const time = timeText ? `<span>${escapeHtml(timeText)}</span>` : '';
   const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', yearly:'recYearly' };
   const recurring = ev.recurring && recurMap[ev.recurring]
     ? `<span>↻ ${escapeHtml(t(recurMap[ev.recurring]))}</span>` : '';
@@ -1592,8 +1877,12 @@ function renderCreate() {
         <input type="date" id="cf-date" value="${escapeAttr(prefilledDate)}">
       </div>
       <div class="field">
-        <label>${escapeHtml(t('fTimeOpt'))}</label>
+        <label>${escapeHtml(t('fStartOpt'))}</label>
         <input type="time" id="cf-time">
+      </div>
+      <div class="field">
+        <label>${escapeHtml(t('fEndOpt'))}</label>
+        <input type="time" id="cf-end-time">
       </div>
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
@@ -1698,6 +1987,99 @@ function renderCreate() {
       </div>
       <button class="btn primary full" onclick="submitCreate('bill')">${escapeHtml(t('createBtn'))}</button>
     `;
+  } else if (kind === 'travel') {
+    const deviceTz = getDeviceTimezone();
+    const tzFromInitial = state.createTzFrom || deviceTz;
+    const tzToInitial   = state.createTzTo   || deviceTz;
+    state.createTzFrom = tzFromInitial;
+    state.createTzTo   = tzToInitial;
+    form = `
+      <div class="field">
+        <label>${escapeHtml(t('fTitle'))}</label>
+        <input type="text" id="cf-title" autofocus>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(t('fTravelMethod'))}</label>
+        <div class="chip-picker" id="cf-travel-method">
+          ${TRAVEL_METHODS.map(m => `<button type="button" data-val="${m.id}" onclick="pickChip(this)">${escapeHtml(t(m.labelKey))}</button>`).join('')}
+        </div>
+      </div>
+
+      <div class="travel-block">
+        <div class="block-title">${escapeHtml(t('travelDeparture').replace(/^./, c => c.toUpperCase()))}</div>
+        <div class="field">
+          <label>${escapeHtml(t('fFromLocation'))}</label>
+          <input type="text" id="cf-from-location" placeholder="London">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fDepartDate'))}</label>
+          <input type="date" id="cf-date" value="${escapeAttr(prefilledDate)}" onchange="onDepartureDateChange()">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fDepartTime'))}</label>
+          <input type="time" id="cf-time">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fFromTz'))}</label>
+          <button type="button" class="tz-button" id="cf-from-tz-btn" onclick="openTzPicker('from')">
+            <span>${escapeHtml(formatTimezoneLabel(tzFromInitial))}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="travel-block">
+        <div class="block-title">${escapeHtml(t('travelArrival').replace(/^./, c => c.toUpperCase()))}</div>
+        <div class="field">
+          <label>${escapeHtml(t('fToLocation'))}</label>
+          <input type="text" id="cf-to-location" placeholder="New York">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fArriveDate'))}</label>
+          <input type="date" id="cf-end-date" value="${escapeAttr(prefilledDate)}">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fArriveTime'))}</label>
+          <input type="time" id="cf-end-time">
+        </div>
+        <div class="field">
+          <label>${escapeHtml(t('fToTz'))}</label>
+          <button type="button" class="tz-button" id="cf-to-tz-btn" onclick="openTzPicker('to')">
+            <span>${escapeHtml(formatTimezoneLabel(tzToInitial))}</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>${escapeHtml(t('fWho'))}</label>
+        <div class="chip-picker" id="cf-assignee">
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+        </div>
+      </div>
+      <div class="field">
+        <div class="checkbox-row">
+          <input type="checkbox" id="cf-sync-ios" onchange="onSyncIosChange()">
+          <span>${escapeHtml(t('fSyncToIos'))}</span>
+        </div>
+      </div>
+      <div class="field" id="cf-alarm-wrap" style="display:none">
+        <label>${escapeHtml(t('fAlarm'))}</label>
+        <select id="cf-alarm">
+          <option value="">${escapeHtml(t('alarmNone'))}</option>
+          <option value="0">${escapeHtml(t('alarmAtTime'))}</option>
+          <option value="15">${escapeHtml(t('alarm15min'))}</option>
+          <option value="30">${escapeHtml(t('alarm30min'))}</option>
+          <option value="60">${escapeHtml(t('alarm1hr'))}</option>
+          <option value="120">${escapeHtml(t('alarm2hr'))}</option>
+          <option value="1440">${escapeHtml(t('alarm1day'))}</option>
+          <option value="2880">${escapeHtml(t('alarm2day'))}</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>${escapeHtml(t('fNotesOpt'))}</label>
+        <textarea id="cf-notes"></textarea>
+      </div>
+      <button class="btn primary full" onclick="submitCreate('travel')">${escapeHtml(t('createBtn'))}</button>
+    `;
   }
 
   return `
@@ -1709,6 +2091,7 @@ function renderCreate() {
           <button class="${kind==='event'?'active':''}" onclick="setCreateKind('event')">${escapeHtml(t('kindEvent'))}</button>
           <button class="${kind==='task'?'active':''}"  onclick="setCreateKind('task')">${escapeHtml(t('kindTask'))}</button>
           <button class="${kind==='bill'?'active':''}"  onclick="setCreateKind('bill')">${escapeHtml(t('kindBill'))}</button>
+          <button class="${kind==='travel'?'active':''}" onclick="setCreateKind('travel')">${escapeHtml(t('kindTravel'))}</button>
         </div>
         <form onsubmit="return false">${form}</form>
       </div>
@@ -1827,8 +2210,12 @@ function renderModal() {
             <input type="date" id="f-date" value="${escapeAttr(ev.date||'')}">
           </div>
           <div class="field">
-            <label>${escapeHtml(t('fTimeOpt'))}</label>
+            <label>${escapeHtml(t('fStartOpt'))}</label>
             <input type="time" id="f-time" value="${escapeAttr(ev.time||'')}">
+          </div>
+          <div class="field">
+            <label>${escapeHtml(t('fEndOpt'))}</label>
+            <input type="time" id="f-end-time" value="${escapeAttr(ev.end_time||'')}">
           </div>
           <div class="field">
             <label>${escapeHtml(t('fWho'))}</label>
@@ -1958,6 +2345,151 @@ function renderModal() {
           <div class="modal-actions">
             <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
             <button class="btn primary" onclick="saveBill('${b.id||''}')">${escapeHtml(t('save'))}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (m.type === 'editTravel') {
+    const it = m.item;
+    const tzFromVal = state.editTzFrom || it.from_tz || getDeviceTimezone();
+    const tzToVal   = state.editTzTo   || it.to_tz   || tzFromVal;
+    const method = it.travel_method || '';
+    return `
+      <div class="backdrop" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>${escapeHtml(t('editTravel1'))}<em>${escapeHtml(t('editTravel2'))}</em></h3>
+          <div class="field">
+            <label>${escapeHtml(t('fTitle'))}</label>
+            <input type="text" id="f-title" value="${escapeAttr(it.title||'')}" autofocus>
+          </div>
+          <div class="field">
+            <label>${escapeHtml(t('fTravelMethod'))}</label>
+            <div class="chip-picker" id="f-travel-method">
+              ${TRAVEL_METHODS.map(mthd => `<button type="button" data-val="${mthd.id}" class="${method === mthd.id ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(t(mthd.labelKey))}</button>`).join('')}
+            </div>
+          </div>
+
+          <div class="travel-block">
+            <div class="block-title">${escapeHtml(t('travelDeparture').replace(/^./, c => c.toUpperCase()))}</div>
+            <div class="field">
+              <label>${escapeHtml(t('fFromLocation'))}</label>
+              <input type="text" id="f-from-location" value="${escapeAttr(it.from_location||'')}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fDepartDate'))}</label>
+              <input type="date" id="f-date" value="${escapeAttr(it.date||'')}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fDepartTime'))}</label>
+              <input type="time" id="f-time" value="${escapeAttr(formatTimeForDisplay(it.time))}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fFromTz'))}</label>
+              <button type="button" class="tz-button" onclick="openTzPicker('from','edit')">
+                <span>${escapeHtml(formatTimezoneLabel(tzFromVal))}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="travel-block">
+            <div class="block-title">${escapeHtml(t('travelArrival').replace(/^./, c => c.toUpperCase()))}</div>
+            <div class="field">
+              <label>${escapeHtml(t('fToLocation'))}</label>
+              <input type="text" id="f-to-location" value="${escapeAttr(it.to_location||'')}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fArriveDate'))}</label>
+              <input type="date" id="f-end-date" value="${escapeAttr(it.end_date||it.date||'')}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fArriveTime'))}</label>
+              <input type="time" id="f-end-time" value="${escapeAttr(formatTimeForDisplay(it.end_time))}">
+            </div>
+            <div class="field">
+              <label>${escapeHtml(t('fToTz'))}</label>
+              <button type="button" class="tz-button" onclick="openTzPicker('to','edit')">
+                <span>${escapeHtml(formatTimezoneLabel(tzToVal))}</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>${escapeHtml(t('fWho'))}</label>
+            <div class="chip-picker" id="f-assignee">
+              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${it.assignee === p.id ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+            </div>
+          </div>
+          <div class="field">
+            <div class="checkbox-row">
+              <input type="checkbox" id="f-sync-ios" ${truthy(it.sync_to_ios)?'checked':''} onchange="onModalSyncIosChange()">
+              <span>${escapeHtml(t('fSyncToIos'))}</span>
+            </div>
+          </div>
+          <div class="field" id="f-alarm-wrap" style="display:${truthy(it.sync_to_ios)?'block':'none'}">
+            <label>${escapeHtml(t('fAlarm'))}</label>
+            <select id="f-alarm">
+              <option value="" ${!it.alarm_minutes&&it.alarm_minutes!==0?'selected':''}>${escapeHtml(t('alarmNone'))}</option>
+              <option value="0" ${String(it.alarm_minutes)==='0'?'selected':''}>${escapeHtml(t('alarmAtTime'))}</option>
+              <option value="15" ${String(it.alarm_minutes)==='15'?'selected':''}>${escapeHtml(t('alarm15min'))}</option>
+              <option value="30" ${String(it.alarm_minutes)==='30'?'selected':''}>${escapeHtml(t('alarm30min'))}</option>
+              <option value="60" ${String(it.alarm_minutes)==='60'?'selected':''}>${escapeHtml(t('alarm1hr'))}</option>
+              <option value="120" ${String(it.alarm_minutes)==='120'?'selected':''}>${escapeHtml(t('alarm2hr'))}</option>
+              <option value="1440" ${String(it.alarm_minutes)==='1440'?'selected':''}>${escapeHtml(t('alarm1day'))}</option>
+              <option value="2880" ${String(it.alarm_minutes)==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>${escapeHtml(t('fNotesOpt'))}</label>
+            <textarea id="f-notes">${escapeHtml(it.notes||'')}</textarea>
+          </div>
+          <div class="modal-actions">
+            <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
+            <button class="btn primary" onclick="saveTravel('${it.id||''}')">${escapeHtml(t('save'))}</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (m.type === 'tzPicker') {
+    const query = (state.tzPickerQuery || '').trim().toLowerCase();
+    const all = getAllTimezones();
+    const recent = getRecentTimezones();
+    const filtered = query
+      ? all.filter(z => z.toLowerCase().includes(query) || formatTimezoneLabel(z).toLowerCase().includes(query)).slice(0, 60)
+      : null;
+
+    let body;
+    if (filtered) {
+      body = filtered.length
+        ? filtered.map(z => `<button class="tz-item" onclick="selectTimezone('${escapeAttr(z)}')">${escapeHtml(formatTimezoneLabel(z))}</button>`).join('')
+        : `<div class="tz-empty">${escapeHtml(t('tzPickerNoResults'))}</div>`;
+    } else {
+      let parts = '';
+      const deviceTz = getDeviceTimezone();
+      parts += `<div class="tz-section">${escapeHtml(t('tzCurrent'))}</div>`;
+      parts += `<button class="tz-item" onclick="selectTimezone('${escapeAttr(deviceTz)}')">${escapeHtml(formatTimezoneLabel(deviceTz))}</button>`;
+      if (recent.length) {
+        parts += `<div class="tz-section">Recent</div>`;
+        parts += recent.map(z => `<button class="tz-item" onclick="selectTimezone('${escapeAttr(z)}')">${escapeHtml(formatTimezoneLabel(z))}</button>`).join('');
+      }
+      parts += `<div class="tz-section">Common</div>`;
+      parts += COMMON_TIMEZONES.map(z => `<button class="tz-item" onclick="selectTimezone('${escapeAttr(z)}')">${escapeHtml(formatTimezoneLabel(z))}</button>`).join('');
+      body = parts;
+    }
+
+    return `
+      <div class="backdrop" onclick="cancelTzPicker(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3>${escapeHtml(m.side === 'from' ? t('fFromTz') : t('fToTz'))}</h3>
+          <div class="field">
+            <input type="text" id="tz-search" placeholder="${escapeHtml(t('tzPickerSearch'))}" oninput="onTzSearchInput(this.value)" autofocus>
+          </div>
+          <div class="tz-list" id="tz-list">${body}</div>
+          <div class="modal-actions">
+            <button class="btn secondary full" onclick="cancelTzPicker()">${escapeHtml(t('cancel'))}</button>
           </div>
         </div>
       </div>
@@ -2094,8 +2626,14 @@ function openEditFlow(kind, id, instanceDate, isInstance) {
   }
   // Direct edit
   if (kind === 'events') {
-    const isTask = item.done === true || item.done === false || item.done === 'true' || item.done === 'false';
-    state.modal = { type: isTask ? 'editTask' : 'editEvent', item };
+    if (item.kind === 'travel') {
+      state.editTzFrom = item.from_tz || getDeviceTimezone();
+      state.editTzTo   = item.to_tz   || state.editTzFrom;
+      state.modal = { type: 'editTravel', item };
+    } else {
+      const isTask = item.done === true || item.done === false || item.done === 'true' || item.done === 'false';
+      state.modal = { type: isTask ? 'editTask' : 'editEvent', item };
+    }
   } else {
     state.modal = { type: 'editBill', item };
   }
@@ -2212,6 +2750,7 @@ async function submitCreate(kind) {
 
   if (kind === 'event' || kind === 'task') {
     const time = document.getElementById('cf-time').value;
+    const endTime = document.getElementById('cf-end-time').value;
     const recurring = document.getElementById('cf-recurring').value;
     const recurUntilEl = document.getElementById('cf-recur-until');
     const recurUntil = recurUntilEl ? recurUntilEl.value : '';
@@ -2221,7 +2760,7 @@ async function submitCreate(kind) {
     const syncIos = document.getElementById('cf-sync-ios').checked;
     const alarmRaw = document.getElementById('cf-alarm').value;
     const item = {
-      title, date, time, assignee, notes,
+      title, date, time, end_time: endTime, assignee, notes,
       recurring,
       recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
       exceptions: '',
@@ -2251,6 +2790,33 @@ async function submitCreate(kind) {
     };
     await addBill(item);
     toast(t('toastBillAdded'));
+  } else if (kind === 'travel') {
+    const time = document.getElementById('cf-time').value;
+    const endTime = document.getElementById('cf-end-time').value;
+    const endDate = document.getElementById('cf-end-date').value || date;
+    const fromLoc = document.getElementById('cf-from-location').value.trim();
+    const toLoc   = document.getElementById('cf-to-location').value.trim();
+    const fromTz  = state.createTzFrom || getDeviceTimezone();
+    const toTz    = state.createTzTo   || fromTz;
+    const method  = getPickedChip('cf-travel-method');
+    const notes = document.getElementById('cf-notes').value.trim();
+    const syncIos = document.getElementById('cf-sync-ios').checked;
+    const alarmRaw = document.getElementById('cf-alarm').value;
+    const item = {
+      kind: 'travel',
+      title, date, end_date: endDate, time, end_time: endTime,
+      from_location: fromLoc, to_location: toLoc,
+      from_tz: fromTz, to_tz: toTz,
+      travel_method: method,
+      assignee, notes,
+      recurring: 'none', recur_until: '', exceptions: '',
+      sync_to_ios: syncIos,
+      alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
+    };
+    rememberTimezone(fromTz); rememberTimezone(toTz);
+    await addEvent(item);
+    toast(t('toastEventAdded'));
+    state.createTzFrom = null; state.createTzTo = null;
   }
   state.tab = 'calendar';
   state.calMode = (kind === 'bill') ? 'bills' : 'events';
@@ -2266,6 +2832,7 @@ async function saveEvent(existingId, isTask) {
   const title = document.getElementById('f-title').value.trim();
   const date  = document.getElementById('f-date').value;
   const time  = document.getElementById('f-time').value;
+  const endTime = document.getElementById('f-end-time').value;
   const recurring = document.getElementById('f-recurring').value;
   const recurUntilEl = document.getElementById('f-recur-until');
   const recurUntil = recurUntilEl ? recurUntilEl.value : '';
@@ -2276,7 +2843,7 @@ async function saveEvent(existingId, isTask) {
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
-    title, date, time, notes, assignee,
+    title, date, time, end_time: endTime, notes, assignee,
     recurring,
     recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
     sync_to_ios: syncIos,
@@ -2289,6 +2856,46 @@ async function saveEvent(existingId, isTask) {
     payload.done = doneEl ? doneEl.checked : false;
   }
   state.modal = null;
+  render();
+  await updateEvent(payload);
+  toast(t('toastEventUpdated'));
+}
+
+async function saveTravel(existingId) {
+  if (!existingId) return;
+  const existing = state.events.find(x => x.id === existingId);
+  if (!existing) return;
+  const title = document.getElementById('f-title').value.trim();
+  const date = document.getElementById('f-date').value;
+  const endDate = document.getElementById('f-end-date').value || date;
+  const time = document.getElementById('f-time').value;
+  const endTime = document.getElementById('f-end-time').value;
+  const fromLoc = document.getElementById('f-from-location').value.trim();
+  const toLoc   = document.getElementById('f-to-location').value.trim();
+  const fromTz  = state.editTzFrom || existing.from_tz || getDeviceTimezone();
+  const toTz    = state.editTzTo   || existing.to_tz   || fromTz;
+  const method  = getPickedChip('f-travel-method');
+  const assignee = getPickedChip('f-assignee');
+  const notes = document.getElementById('f-notes').value.trim();
+  const syncIos = document.getElementById('f-sync-ios').checked;
+  const alarmRaw = document.getElementById('f-alarm').value;
+  if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
+  const payload = {
+    ...existing,
+    kind: 'travel',
+    title, date, end_date: endDate, time, end_time: endTime,
+    from_location: fromLoc, to_location: toLoc,
+    from_tz: fromTz, to_tz: toTz,
+    travel_method: method,
+    assignee, notes,
+    recurring: 'none', recur_until: '',
+    sync_to_ios: syncIos,
+    alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
+  };
+  rememberTimezone(fromTz); rememberTimezone(toTz);
+  state.modal = null;
+  state.editTzFrom = null;
+  state.editTzTo = null;
   render();
   await updateEvent(payload);
   toast(t('toastEventUpdated'));
@@ -2361,6 +2968,14 @@ function runModalConfirm() {
     return;
   }
   m.onConfirm();
+}
+
+function cancelTzPicker(e) {
+  if (e && e.target !== e.currentTarget) return;
+  const m = state.modal;
+  state.tzPickerQuery = '';
+  state.modal = (m && m.prev) ? m.prev : null;
+  render();
 }
 
 // ----- Settings actions -----
