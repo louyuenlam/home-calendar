@@ -692,6 +692,58 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 }
 .modal h3 em { font-style: italic; color: var(--accent-dark); font-weight: 500; }
 
+/* View-only modal */
+.modal h3.view-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-style: italic;
+}
+.modal h3.view-title svg {
+  flex-shrink: 0;
+}
+.view-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+  padding: 14px;
+  background: var(--cream-soft);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+}
+.view-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.view-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.view-value {
+  font-size: 14px;
+  color: var(--ink);
+  word-break: break-word;
+}
+.view-value .chip {
+  font-size: 11px;
+  padding: 3px 9px;
+}
+.view-actions {
+  gap: 8px;
+}
+.item-row {
+  cursor: pointer;
+}
+.item-row:active .item-main {
+  opacity: 0.7;
+}
+
 .field { margin-bottom: 14px; }
 .field label {
   display: block;
@@ -795,21 +847,31 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 /* ---------- Toast ---------- */
 .toast {
   position: fixed;
-  bottom: calc(env(safe-area-inset-bottom) + 22px);
+  bottom: calc(env(safe-area-inset-bottom) + 92px);
   left: 50%;
-  transform: translateX(-50%) translateY(100px);
+  transform: translateX(-50%) translateY(60px) scale(0.92);
   background: var(--ink);
   color: var(--cream);
-  padding: 12px 22px;
+  padding: 14px 26px;
   border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  box-shadow: var(--shadow-lift);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.25);
   z-index: 200;
-  transition: transform 0.3s ease;
+  transition: transform 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease;
   pointer-events: none;
+  opacity: 0;
+  white-space: nowrap;
+  max-width: 90vw;
 }
-.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.show {
+  transform: translateX(-50%) translateY(0) scale(1);
+  opacity: 1;
+}
+.toast.error {
+  background: var(--warn);
+}
 
 /* ---------- Bills list ---------- */
 .bills-section-head {
@@ -896,7 +958,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v14 · 2026-04-29';
+const APP_VERSION = 'v17 · 2026-04-29';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -971,6 +1033,8 @@ const I18N = {
     createSubtitle: 'Pick what to add, then fill in the details.',
     kindEvent: 'Event', kindTask: 'Task', kindBill: 'Bill', kindTravel: 'Travel',
     createBtn: 'Create',
+    savingBtn: 'Saving…',
+    creatingBtn: 'Creating…',
 
     // Form labels
     fTitle: 'Title',
@@ -1010,6 +1074,7 @@ const I18N = {
     fPaid: 'Paid',
     fDone: 'Done',
     fSyncToIos: 'Send to phone calendar',
+    fSendTo: 'Send phone alert to',
     fAlarm: 'Alarm',
     alarmNone: 'No alarm',
     alarmAtTime: 'At time of event',
@@ -1030,6 +1095,8 @@ const I18N = {
     editTask1: 'Edit', editTask2: ' task',
     editBill1: 'Edit', editBill2: ' bill',
     editTravel1: 'Edit', editTravel2: ' travel',
+    viewItemTitle: 'Details',
+    viewClose: 'Close',
     save: 'Save', cancel: 'Cancel',
 
     // Recurring choice
@@ -1078,6 +1145,7 @@ const I18N = {
     // Toasts
     toastEventAdded: 'Event added', toastEventUpdated: 'Event updated', toastEventDeleted: 'Event deleted',
     toastBillAdded: 'Bill added', toastBillUpdated: 'Bill updated', toastBillDeleted: 'Bill deleted',
+    toastSaveFailed: 'Save failed — try again',
     toastPaid: 'Marked paid', toastUnpaid: 'Marked unpaid',
     toastDone: 'Marked done', toastUndone: 'Marked not done',
     toastRolledForward: 'Rolled to next date',
@@ -1099,7 +1167,7 @@ const I18N = {
     pMilk: 'Milk', pBb: 'BB', pCilla: 'Cilla',
     months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     weekdaysFull: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
-    weekdaysShort: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    weekdaysShort: ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
     today: 'Today', yesterday: 'Yesterday', tomorrow: 'Tomorrow',
     htmlLang: 'en'
   },
@@ -1114,6 +1182,8 @@ const I18N = {
     createSubtitle: '選擇要新增的類型,然後填寫資料。',
     kindEvent: '活動', kindTask: '待辦', kindBill: '帳單', kindTravel: '旅程',
     createBtn: '建立',
+    savingBtn: '儲存中…',
+    creatingBtn: '建立中…',
 
     fTitle: '標題',
     fDate: '日期',
@@ -1152,6 +1222,7 @@ const I18N = {
     fPaid: '已付款',
     fDone: '已完成',
     fSyncToIos: '傳送到手機日曆',
+    fSendTo: '通知對象',
     fAlarm: '提醒',
     alarmNone: '不提醒',
     alarmAtTime: '事件開始時',
@@ -1171,6 +1242,8 @@ const I18N = {
     editTask1: '編輯', editTask2: '待辦',
     editBill1: '編輯', editBill2: '帳單',
     editTravel1: '編輯', editTravel2: '旅程',
+    viewItemTitle: '詳情',
+    viewClose: '關閉',
     save: '儲存', cancel: '取消',
 
     recurChoiceTitle: '這是重複項目',
@@ -1215,6 +1288,7 @@ const I18N = {
 
     toastEventAdded: '已新增活動', toastEventUpdated: '已更新活動', toastEventDeleted: '已刪除活動',
     toastBillAdded: '已新增帳單', toastBillUpdated: '已更新帳單', toastBillDeleted: '已刪除帳單',
+    toastSaveFailed: '儲存失敗 — 請再試',
     toastPaid: '已標示為已付', toastUnpaid: '已標示為未付',
     toastDone: '已完成', toastUndone: '取消完成',
     toastRolledForward: '已延至下次',
@@ -1235,7 +1309,7 @@ const I18N = {
     pMilk: '牛奶', pBb: 'BB', pCilla: 'Cilla',
     months: ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
     weekdaysFull: ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'],
-    weekdaysShort: ['一','二','三','四','五','六','日'],
+    weekdaysShort: ['日','一','二','三','四','五','六'],
     today: '今日', yesterday: '昨日', tomorrow: '明日',
     htmlLang: 'zh-Hant'
   }
@@ -1288,6 +1362,7 @@ const state = {
   syncMsg: '',
   modal: null,
   toast: null,
+  saving: false,            // true while a save/create is in flight (prevents double-tap)
   pollTimer: null,
   lang: 'en'
 };
@@ -1600,16 +1675,9 @@ function expandItemsByDate(items, fromKey, toKey) {
     const startKey = it.date;
     if (startKey > toKey) return;
 
-    // Travel: render two virtual entries (departure + arrival)
+    // Travel: render as a single row on the departure date (avoids visual clutter on arrival date)
     if (it.kind === 'travel') {
-      const endKey = it.end_date || it.date;
-      pushOn(startKey, it, { _travelLeg: 'departure', _isRecurringInstance: false });
-      if (endKey !== startKey) {
-        pushOn(endKey, it, { _travelLeg: 'arrival', _isRecurringInstance: false });
-      } else {
-        // Same-day: render arrival entry on the same date as well, so both lines show
-        pushOn(startKey, it, { _travelLeg: 'arrival', _isRecurringInstance: false });
-      }
+      pushOn(startKey, it, { _isRecurringInstance: false });
       return;
     }
 
@@ -1687,7 +1755,7 @@ function renderCalendar() {
   const year = vm.getFullYear(), month = vm.getMonth();
 
   const first = new Date(year, month, 1);
-  const startWeekday = (first.getDay() + 6) % 7; // Mon=0
+  const startWeekday = first.getDay(); // Sun=0, Mon=1, ..., Sat=6
   const gridStart = new Date(year, month, 1 - startWeekday);
   const gridEnd = new Date(gridStart);
   gridEnd.setDate(gridStart.getDate() + 41);
@@ -1773,24 +1841,30 @@ function renderEventRow(ev) {
   const p = ev.assignee && PERSON_BY_ID[ev.assignee];
   const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
 
-  // Travel leg rendering
-  if (ev.kind === 'travel' && ev._travelLeg) {
-    const isDep = ev._travelLeg === 'departure';
-    const time = formatTimeForDisplay(isDep ? ev.time : ev.end_time);
-    const loc = isDep ? (ev.from_location || '') : (ev.to_location || '');
-    const label = isDep ? t('travelDeparture') : t('travelArrival');
+  // Travel — single row rendering: "[icon] 13:45 → 14:35   London → New York"
+  if (ev.kind === 'travel') {
+    const startTime = formatTimeForDisplay(ev.time);
+    const endTime = formatTimeForDisplay(ev.end_time);
+    const timeStr = startTime && endTime ? `${startTime} → ${endTime}` : (startTime || endTime || '');
+    const locStr = ev.from_location && ev.to_location
+      ? `${ev.from_location} → ${ev.to_location}`
+      : (ev.from_location || ev.to_location || '');
     const icon = travelIconSvg(ev.travel_method);
-    const titleLine = ev.title ? escapeHtml(ev.title) : '';
+    const titleLine = ev.title ? escapeHtml(ev.title) : (locStr ? escapeHtml(locStr) : t('untitled'));
     const isInstance = false;
     const dateForArgs = ev._instanceDate || ev.date || '';
+    const metaBits = [];
+    if (timeStr) metaBits.push(`<span>${escapeHtml(timeStr)}</span>`);
+    if (locStr && ev.title) metaBits.push(`<span>${escapeHtml(locStr)}</span>`);
+    if (chip) metaBits.push(chip);
     return `
-      <div class="item-row travel-row">
+      <div class="item-row travel-row" onclick="openViewFlow('events','${ev.id}','${dateForArgs}',${isInstance})">
         <div class="item-main">
-          <div class="item-title">${titleLine || (loc ? escapeHtml(loc) : t('untitled'))}</div>
-          <div class="item-meta">${icon}${time ? `<span>${escapeHtml(time)}</span>` : ''}${loc && titleLine ? `<span>${escapeHtml(loc)}</span>` : ''}<span>${escapeHtml(label)}</span>${chip}</div>
+          <div class="item-title">${icon}${titleLine}</div>
+          <div class="item-meta">${metaBits.join('')}</div>
           ${ev.notes ? `<div class="item-meta">${escapeHtml(ev.notes)}</div>` : ''}
         </div>
-        <div class="item-actions">
+        <div class="item-actions" onclick="event.stopPropagation()">
           <button class="icon-btn" onclick="openEditFlow('events','${ev.id}','${dateForArgs}',${isInstance})">✎</button>
           <button class="icon-btn warn" onclick="openDeleteFlow('events','${ev.id}','${dateForArgs}',${isInstance})">🗑</button>
         </div>
@@ -1816,13 +1890,13 @@ function renderEventRow(ev) {
   const isInstance = !!ev._isRecurringInstance;
   const dateForArgs = ev._instanceDate || ev.date || '';
   return `
-    <div class="item-row ${isDone?'paid':''}">
+    <div class="item-row ${isDone?'paid':''}" onclick="openViewFlow('events','${ev.id}','${dateForArgs}',${isInstance})">
       <div class="item-main">
         <div class="item-title" style="${isDone?'text-decoration:line-through;opacity:0.6':''}">${escapeHtml(ev.title || t('untitled'))}</div>
         <div class="item-meta">${time}${chip}${recurring}</div>
         ${ev.notes ? `<div class="item-meta">${escapeHtml(ev.notes)}</div>` : ''}
       </div>
-      <div class="item-actions">
+      <div class="item-actions" onclick="event.stopPropagation()">
         ${checkBtn}
         <button class="icon-btn" onclick="openEditFlow('events','${ev.id}','${dateForArgs}',${isInstance})">✎</button>
         <button class="icon-btn warn" onclick="openDeleteFlow('events','${ev.id}','${dateForArgs}',${isInstance})">🗑</button>
@@ -1843,13 +1917,13 @@ function renderBillRow(b) {
   const isInstance = !!b._isRecurringInstance;
   const dateForArgs = b._instanceDate || b.date || '';
   return `
-    <div class="item-row ${paid?'paid':''}">
+    <div class="item-row ${paid?'paid':''}" onclick="openViewFlow('bills','${b.id}','${dateForArgs}',${isInstance})">
       <div class="item-main">
         <div class="item-title">${escapeHtml(b.title || t('untitled'))}</div>
         <div class="item-meta">${amt}${chip}${recurring}</div>
         ${b.notes ? `<div class="item-meta">${escapeHtml(b.notes)}</div>` : ''}
       </div>
-      <div class="item-actions">
+      <div class="item-actions" onclick="event.stopPropagation()">
         <button class="icon-btn" onclick="togglePaid('${b.id}')">${paid?'↺':'✓'}</button>
         <button class="icon-btn" onclick="openEditFlow('bills','${b.id}','${dateForArgs}',${isInstance})">✎</button>
         <button class="icon-btn warn" onclick="openDeleteFlow('bills','${b.id}','${dateForArgs}',${isInstance})">🗑</button>
@@ -1928,11 +2002,12 @@ function renderCreate() {
           <option value="10080">${escapeHtml(t('alarm1week'))}</option>
         </select>
       </div>
+      ${renderRecipientsBlock('cf', [])}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
         <textarea id="cf-notes"></textarea>
       </div>
-      <button class="btn primary full" onclick="submitCreate('${kind}')">${escapeHtml(t('createBtn'))}</button>
+      <button class="btn primary full" onclick="submitCreate('${kind}')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
   } else if (kind === 'bill') {
     const recurOpts = ['none','weekly','fortnightly','monthly','quarterly','yearly'];
@@ -1981,11 +2056,12 @@ function renderCreate() {
           <option value="10080">${escapeHtml(t('alarm1week'))}</option>
         </select>
       </div>
+      ${renderRecipientsBlock('cf', [])}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
         <textarea id="cf-notes"></textarea>
       </div>
-      <button class="btn primary full" onclick="submitCreate('bill')">${escapeHtml(t('createBtn'))}</button>
+      <button class="btn primary full" onclick="submitCreate('bill')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
   } else if (kind === 'travel') {
     const deviceTz = getDeviceTimezone();
@@ -2074,11 +2150,12 @@ function renderCreate() {
           <option value="2880">${escapeHtml(t('alarm2day'))}</option>
         </select>
       </div>
+      ${renderRecipientsBlock('cf', [])}
       <div class="field">
         <label>${escapeHtml(t('fNotesOpt'))}</label>
         <textarea id="cf-notes"></textarea>
       </div>
-      <button class="btn primary full" onclick="submitCreate('travel')">${escapeHtml(t('createBtn'))}</button>
+      <button class="btn primary full" onclick="submitCreate('travel')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('creatingBtn') : t('createBtn'))}</button>
     `;
   }
 
@@ -2189,6 +2266,117 @@ function renderModal() {
   if (!state.modal) return '';
   const m = state.modal;
 
+  if (m.type === 'viewItem') {
+    const it = m.item || {};
+    const kind = m.kind;
+    const isBill = kind === 'bills';
+    const isTravel = !isBill && it.kind === 'travel';
+    const isTask = !isBill && !isTravel && (it.done === true || it.done === false || it.done === 'true' || it.done === 'false');
+
+    // Build details rows
+    const rows = [];
+    function row(label, value) {
+      if (value === null || value === undefined || value === '') return;
+      rows.push(`<div class="view-row"><div class="view-label">${escapeHtml(label)}</div><div class="view-value">${value}</div></div>`);
+    }
+
+    // Date / time
+    const dateStr = it.date || m.instanceDate || '';
+    if (isTravel) {
+      const startTime = formatTimeForDisplay(it.time);
+      const endTime = formatTimeForDisplay(it.end_time);
+      const endDate = it.end_date || dateStr;
+      const sameDay = endDate === dateStr;
+      row(t('fDepartDate'), escapeHtml(dateStr));
+      if (startTime) row(t('fDepartTime'), escapeHtml(startTime));
+      if (it.from_location) row(t('fFromLocation'), escapeHtml(it.from_location));
+      if (it.from_tz) row(t('fFromTz'), escapeHtml(formatTimezoneLabel(it.from_tz)));
+      if (!sameDay) row(t('fArriveDate'), escapeHtml(endDate));
+      if (endTime) row(t('fArriveTime'), escapeHtml(endTime));
+      if (it.to_location) row(t('fToLocation'), escapeHtml(it.to_location));
+      if (it.to_tz) row(t('fToTz'), escapeHtml(formatTimezoneLabel(it.to_tz)));
+      if (it.travel_method) {
+        const methodKey = ({plane:'methodPlane',train:'methodTrain',drive:'methodDrive',bus:'methodBus',ferry:'methodFerry',other:'methodOther'})[it.travel_method] || '';
+        row(t('fTravelMethod'), escapeHtml(methodKey ? t(methodKey) : it.travel_method));
+      }
+    } else {
+      row(t('fDate'), escapeHtml(dateStr));
+      const startTime = formatTimeForDisplay(it.time);
+      const endTime = formatTimeForDisplay(it.end_time);
+      const timeDisplay = startTime ? (endTime ? `${startTime} → ${endTime}` : startTime) : '';
+      if (timeDisplay) row(t('fStartOpt').replace(/\s*\(.*\)$/,''), escapeHtml(timeDisplay));
+      if (isBill && (it.amount || it.amount === 0)) row(t('fAmount'), `£${Number(it.amount).toFixed(2)}`);
+    }
+
+    // Assignee chip
+    if (it.assignee) {
+      const p = PERSON_BY_ID[it.assignee];
+      const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : escapeHtml(it.assignee);
+      row(t('fWho'), chip);
+    }
+
+    // Recurrence
+    if (it.recurring && it.recurring !== 'none' && it.recurring !== '') {
+      const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
+      const recurLabel = recurMap[it.recurring] ? t(recurMap[it.recurring]) : it.recurring;
+      const untilSuffix = it.recur_until ? ` · ${t('fRecurUntil').replace(/\s*\(.*\)$/,'')} ${escapeHtml(it.recur_until)}` : '';
+      row(t('fRecurring'), `↻ ${escapeHtml(recurLabel)}${untilSuffix}`);
+    }
+
+    // Status flags
+    if (isBill) {
+      row(t('fPaid'), truthy(it.paid) ? '✓' : '—');
+    } else if (isTask) {
+      row(t('fDone'), truthy(it.done) ? '✓' : '—');
+    }
+
+    // Phone alert info
+    if (truthy(it.sync_to_ios)) {
+      const recList = parseRecipients(it.recipients);
+      if (recList.length) {
+        const chips = recList.map(rid => {
+          const p = PERSON_BY_ID[rid];
+          return p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : escapeHtml(rid);
+        }).join(' ');
+        row(t('fSendTo'), chips);
+      } else {
+        row(t('fSyncToIos'), '✓');
+      }
+      if (it.alarm_minutes !== '' && it.alarm_minutes !== null && it.alarm_minutes !== undefined) {
+        const alarmKeys = {0:'alarmAtTime',5:'alarm5min',15:'alarm15min',30:'alarm30min',60:'alarm1hr',120:'alarm2hr',1440:'alarm1day',2880:'alarm2day',10080:'alarm1week'};
+        const alarmKey = alarmKeys[Number(it.alarm_minutes)];
+        if (alarmKey) row(t('fAlarm'), escapeHtml(t(alarmKey)));
+      }
+    }
+
+    // Notes
+    if (it.notes) {
+      row(t('fNotesOpt').replace(/\s*\(.*\)$/,''), `<span style="white-space:pre-wrap">${escapeHtml(it.notes)}</span>`);
+    }
+
+    const titleText = it.title || (isTravel && (it.from_location || it.to_location)
+      ? `${it.from_location || ''}${it.from_location && it.to_location ? ' → ' : ''}${it.to_location || ''}`
+      : t('untitled'));
+    const titleIcon = isTravel ? travelIconSvg(it.travel_method) : '';
+
+    const dateForArgs = m.instanceDate || it.date || '';
+    const isInst = !!m.isInstance;
+
+    return `
+      <div class="backdrop" onclick="closeModal(event)">
+        <div class="modal" onclick="event.stopPropagation()">
+          <h3 class="view-title">${titleIcon}${escapeHtml(titleText)}</h3>
+          <div class="view-grid">${rows.join('')}</div>
+          <div class="modal-actions view-actions">
+            <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('viewClose'))}</button>
+            <button class="btn secondary" onclick="closeModal(); openEditFlow('${kind}','${it.id}','${dateForArgs}',${isInst})">✎ ${escapeHtml(t('editEvent1'))}</button>
+            <button class="btn danger" onclick="closeModal(); openDeleteFlow('${kind}','${it.id}','${dateForArgs}',${isInst})">🗑</button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   if (m.type === 'editEvent' || m.type === 'editTask') {
     const ev = m.item || {};
     const isTask = m.type === 'editTask' || (ev.done === true || ev.done === false || ev.done === 'true' || ev.done === 'false');
@@ -2267,13 +2455,14 @@ function renderModal() {
               <option value="10080" ${String(ev.alarm_minutes)==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
             </select>
           </div>
+          ${renderRecipientsBlockEdit(ev)}
           <div class="field">
             <label>${escapeHtml(t('fNotesOpt'))}</label>
             <textarea id="f-notes">${escapeHtml(ev.notes||'')}</textarea>
           </div>
           <div class="modal-actions">
-            <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
-            <button class="btn primary" onclick="saveEvent('${ev.id||''}',${isTask})">${escapeHtml(t('save'))}</button>
+            <button class="btn secondary" onclick="closeModal()" ${state.saving ? 'disabled' : ''}>${escapeHtml(t('cancel'))}</button>
+            <button class="btn primary" onclick="saveEvent('${ev.id||''}',${isTask})" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('savingBtn') : t('save'))}</button>
           </div>
         </div>
       </div>
@@ -2338,13 +2527,14 @@ function renderModal() {
               <option value="10080" ${String(b.alarm_minutes)==='10080'?'selected':''}>${escapeHtml(t('alarm1week'))}</option>
             </select>
           </div>
+          ${renderRecipientsBlockEdit(b)}
           <div class="field">
             <label>${escapeHtml(t('fNotesOpt'))}</label>
             <textarea id="f-notes">${escapeHtml(b.notes||'')}</textarea>
           </div>
           <div class="modal-actions">
-            <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
-            <button class="btn primary" onclick="saveBill('${b.id||''}')">${escapeHtml(t('save'))}</button>
+            <button class="btn secondary" onclick="closeModal()" ${state.saving ? 'disabled' : ''}>${escapeHtml(t('cancel'))}</button>
+            <button class="btn primary" onclick="saveBill('${b.id||''}')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('savingBtn') : t('save'))}</button>
           </div>
         </div>
       </div>
@@ -2440,13 +2630,14 @@ function renderModal() {
               <option value="2880" ${String(it.alarm_minutes)==='2880'?'selected':''}>${escapeHtml(t('alarm2day'))}</option>
             </select>
           </div>
+          ${renderRecipientsBlockEdit(it)}
           <div class="field">
             <label>${escapeHtml(t('fNotesOpt'))}</label>
             <textarea id="f-notes">${escapeHtml(it.notes||'')}</textarea>
           </div>
           <div class="modal-actions">
-            <button class="btn secondary" onclick="closeModal()">${escapeHtml(t('cancel'))}</button>
-            <button class="btn primary" onclick="saveTravel('${it.id||''}')">${escapeHtml(t('save'))}</button>
+            <button class="btn secondary" onclick="closeModal()" ${state.saving ? 'disabled' : ''}>${escapeHtml(t('cancel'))}</button>
+            <button class="btn primary" onclick="saveTravel('${it.id||''}')" ${state.saving ? 'disabled' : ''}>${escapeHtml(state.saving ? t('savingBtn') : t('save'))}</button>
           </div>
         </div>
       </div>
@@ -2585,6 +2776,15 @@ function getPickedChip(id) {
   const active = el.querySelector('button.active');
   return active ? active.dataset.val : '';
 }
+function toggleChip(btn) {
+  // For multi-select chip pickers — flips this chip's active state, leaves siblings alone
+  btn.classList.toggle('active');
+}
+function getPickedChips(id) {
+  const el = document.getElementById(id);
+  if (!el) return [];
+  return Array.from(el.querySelectorAll('button.active')).map(b => b.dataset.val);
+}
 function onRecurChange() {
   const sel = document.getElementById('cf-recurring');
   const wrap = document.getElementById('cf-until-wrap');
@@ -2598,12 +2798,59 @@ function onModalRecurChange() {
 function onSyncIosChange() {
   const cb = document.getElementById('cf-sync-ios');
   const wrap = document.getElementById('cf-alarm-wrap');
+  const rec = document.getElementById('cf-recipients-wrap');
   if (cb && wrap) wrap.style.display = cb.checked ? 'block' : 'none';
+  if (cb && rec) rec.style.display = cb.checked ? 'block' : 'none';
 }
 function onModalSyncIosChange() {
   const cb = document.getElementById('f-sync-ios');
   const wrap = document.getElementById('f-alarm-wrap');
+  const rec = document.getElementById('f-recipients-wrap');
   if (cb && wrap) wrap.style.display = cb.checked ? 'block' : 'none';
+  if (cb && rec) rec.style.display = cb.checked ? 'block' : 'none';
+}
+
+// Build the "Send phone alert to" multi-select chip block.
+// `prefix` is 'cf' for create-form or 'f' for edit-modal.
+// `preselected` is an array of person ids that should be marked active.
+function renderRecipientsBlock(prefix, preselected) {
+  const sel = new Set(preselected || []);
+  const humans = PEOPLE.filter(p => !p.pet);
+  const wrapId = prefix + '-recipients-wrap';
+  const pickerId = prefix + '-recipients';
+  return `
+    <div class="field" id="${wrapId}" style="display:none">
+      <label>${escapeHtml(t('fSendTo'))}</label>
+      <div class="chip-picker" id="${pickerId}">
+        ${humans.map(p => `<button type="button" data-val="${p.id}" class="${sel.has(p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Same but for the edit modal — initial display matches the syncIos state of the item being edited
+function renderRecipientsBlockEdit(item) {
+  const preselected = parseRecipients(item.recipients);
+  const sel = new Set(preselected);
+  const humans = PEOPLE.filter(p => !p.pet);
+  const display = truthy(item.sync_to_ios) ? 'block' : 'none';
+  return `
+    <div class="field" id="f-recipients-wrap" style="display:${display}">
+      <label>${escapeHtml(t('fSendTo'))}</label>
+      <div class="chip-picker" id="f-recipients">
+        ${humans.map(p => `<button type="button" data-val="${p.id}" class="${sel.has(p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function parseRecipients(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  return String(raw).split(',').map(s => s.trim()).filter(Boolean);
+}
+function serialiseRecipients(arr) {
+  return (arr || []).filter(Boolean).join(',');
 }
 
 function goToCreate(kind, date) {
@@ -2613,7 +2860,15 @@ function goToCreate(kind, date) {
   render();
 }
 
-// ----- Edit / delete flows (recurring-aware) -----
+// ----- View / Edit / delete flows (recurring-aware) -----
+function openViewFlow(kind, id, instanceDate, isInstance) {
+  const list = kind === 'events' ? state.events : state.bills;
+  const item = list.find(x => x.id === id);
+  if (!item) return;
+  state.modal = { type: 'viewItem', kind, item, instanceDate, isInstance };
+  render();
+}
+
 function openEditFlow(kind, id, instanceDate, isInstance) {
   const list = kind === 'events' ? state.events : state.bills;
   const item = list.find(x => x.id === id);
@@ -2742,12 +2997,29 @@ async function recurChoice(choice) {
 
 // ----- Save handlers -----
 async function submitCreate(kind) {
+  if (state.saving) return;
   const title = document.getElementById('cf-title').value.trim();
   const date  = document.getElementById('cf-date').value;
   const assignee = getPickedChip('cf-assignee');
   if (!title) { toast(t('toastTitleRequired')); return; }
   if (kind === 'bill' && !date) { toast(t('toastTitleDateRequired')); return; }
 
+  state.saving = true;
+  // Re-render so the Create button shows "Creating…" + disabled
+  rerenderActive();
+
+  try {
+    await submitCreateInner(kind, title, date, assignee);
+  } catch (err) {
+    console.error('[CREATE] failed:', err);
+    toast(t('toastEventAdded')); // fallback toast even on failure
+  } finally {
+    state.saving = false;
+    rerenderActive();
+  }
+}
+
+async function submitCreateInner(kind, title, date, assignee) {
   if (kind === 'event' || kind === 'task') {
     const time = document.getElementById('cf-time').value;
     const endTime = document.getElementById('cf-end-time').value;
@@ -2759,6 +3031,7 @@ async function submitCreate(kind) {
     const autoRoll = autoRollEl ? autoRollEl.checked : false;
     const syncIos = document.getElementById('cf-sync-ios').checked;
     const alarmRaw = document.getElementById('cf-alarm').value;
+    const recipients = syncIos ? serialiseRecipients(getPickedChips('cf-recipients')) : '';
     const item = {
       title, date, time, end_time: endTime, assignee, notes,
       recurring,
@@ -2767,6 +3040,7 @@ async function submitCreate(kind) {
       done: kind === 'task' ? false : '',
       auto_roll: autoRoll,
       sync_to_ios: syncIos,
+      recipients,
       alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addEvent(item);
@@ -2779,6 +3053,7 @@ async function submitCreate(kind) {
     const notes = document.getElementById('cf-notes').value.trim();
     const syncIos = document.getElementById('cf-sync-ios').checked;
     const alarmRaw = document.getElementById('cf-alarm').value;
+    const recipients = syncIos ? serialiseRecipients(getPickedChips('cf-recipients')) : '';
     const item = {
       title, amount, date, assignee, notes,
       recurring,
@@ -2786,6 +3061,7 @@ async function submitCreate(kind) {
       exceptions: '',
       paid: false,
       sync_to_ios: syncIos,
+      recipients,
       alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     await addBill(item);
@@ -2802,6 +3078,7 @@ async function submitCreate(kind) {
     const notes = document.getElementById('cf-notes').value.trim();
     const syncIos = document.getElementById('cf-sync-ios').checked;
     const alarmRaw = document.getElementById('cf-alarm').value;
+    const recipients = syncIos ? serialiseRecipients(getPickedChips('cf-recipients')) : '';
     const item = {
       kind: 'travel',
       title, date, end_date: endDate, time, end_time: endTime,
@@ -2811,6 +3088,7 @@ async function submitCreate(kind) {
       assignee, notes,
       recurring: 'none', recur_until: '', exceptions: '',
       sync_to_ios: syncIos,
+      recipients,
       alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
     };
     rememberTimezone(fromTz); rememberTimezone(toTz);
@@ -2826,6 +3104,7 @@ async function submitCreate(kind) {
 }
 
 async function saveEvent(existingId, isTask) {
+  if (state.saving) return;
   if (!existingId) return;
   const existing = state.events.find(x => x.id === existingId);
   if (!existing) return;
@@ -2840,6 +3119,7 @@ async function saveEvent(existingId, isTask) {
   const assignee = getPickedChip('f-assignee');
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
+  const recipients = syncIos ? serialiseRecipients(getPickedChips('f-recipients')) : '';
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
@@ -2847,6 +3127,7 @@ async function saveEvent(existingId, isTask) {
     recurring,
     recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
     sync_to_ios: syncIos,
+    recipients,
     alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
   };
   if (isTask) {
@@ -2855,13 +3136,23 @@ async function saveEvent(existingId, isTask) {
     payload.auto_roll = autoRollEl ? autoRollEl.checked : false;
     payload.done = doneEl ? doneEl.checked : false;
   }
-  state.modal = null;
+  state.saving = true;
   render();
-  await updateEvent(payload);
-  toast(t('toastEventUpdated'));
+  try {
+    await updateEvent(payload);
+    state.modal = null;
+    toast(t('toastEventUpdated'));
+  } catch (err) {
+    console.error('[SAVE] saveEvent failed:', err);
+    toast(t('toastSaveFailed'));
+  } finally {
+    state.saving = false;
+    render();
+  }
 }
 
 async function saveTravel(existingId) {
+  if (state.saving) return;
   if (!existingId) return;
   const existing = state.events.find(x => x.id === existingId);
   if (!existing) return;
@@ -2879,6 +3170,7 @@ async function saveTravel(existingId) {
   const notes = document.getElementById('f-notes').value.trim();
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
+  const recipients = syncIos ? serialiseRecipients(getPickedChips('f-recipients')) : '';
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
@@ -2890,18 +3182,29 @@ async function saveTravel(existingId) {
     assignee, notes,
     recurring: 'none', recur_until: '',
     sync_to_ios: syncIos,
+    recipients,
     alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
   };
   rememberTimezone(fromTz); rememberTimezone(toTz);
-  state.modal = null;
-  state.editTzFrom = null;
-  state.editTzTo = null;
+  state.saving = true;
   render();
-  await updateEvent(payload);
-  toast(t('toastEventUpdated'));
+  try {
+    await updateEvent(payload);
+    state.modal = null;
+    state.editTzFrom = null;
+    state.editTzTo = null;
+    toast(t('toastEventUpdated'));
+  } catch (err) {
+    console.error('[SAVE] saveTravel failed:', err);
+    toast(t('toastSaveFailed'));
+  } finally {
+    state.saving = false;
+    render();
+  }
 }
 
 async function saveBill(existingId) {
+  if (state.saving) return;
   if (!existingId) return;
   const existing = state.bills.find(x => x.id === existingId);
   if (!existing) return;
@@ -2916,6 +3219,7 @@ async function saveBill(existingId) {
   const assignee = getPickedChip('f-assignee');
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
+  const recipients = syncIos ? serialiseRecipients(getPickedChips('f-recipients')) : '';
   if (!title || !date) { toast(t('toastTitleDateRequired')); return; }
   const payload = {
     ...existing,
@@ -2923,12 +3227,22 @@ async function saveBill(existingId) {
     recur_until: (recurring && recurring !== 'none') ? recurUntil : '',
     paid, notes, assignee,
     sync_to_ios: syncIos,
+    recipients,
     alarm_minutes: syncIos && alarmRaw !== '' ? parseInt(alarmRaw, 10) : ''
   };
-  state.modal = null;
+  state.saving = true;
   render();
-  await updateBill(payload);
-  toast(t('toastBillUpdated'));
+  try {
+    await updateBill(payload);
+    state.modal = null;
+    toast(t('toastBillUpdated'));
+  } catch (err) {
+    console.error('[SAVE] saveBill failed:', err);
+    toast(t('toastSaveFailed'));
+  } finally {
+    state.saving = false;
+    render();
+  }
 }
 
 async function togglePaid(id) {
