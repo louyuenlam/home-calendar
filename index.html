@@ -958,7 +958,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v20 · 2026-04-29';
+const APP_VERSION = 'v21 · 2026-04-29';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1088,6 +1088,8 @@ const I18N = {
     alarm1week: '1 week before',
     recNone: 'none', recDaily: 'daily', recWeekly: 'weekly',
     recFortnightly: 'fortnightly',
+    recFourWeekly: 'every 4 weeks',
+    recEvery4Weeks: 'every 4 weeks',
     recMonthly: 'monthly', recQuarterly: 'quarterly', recYearly: 'yearly',
 
     // Edit modals
@@ -1237,6 +1239,7 @@ const I18N = {
     alarm1week: '1 星期前',
     recNone: '不重複', recDaily: '每日', recWeekly: '每週',
     recFortnightly: '兩週一次',
+    recFourWeekly: '每四週',
     recMonthly: '每月', recQuarterly: '每季', recYearly: '每年',
 
     editEvent1: '編輯', editEvent2: '活動',
@@ -1534,6 +1537,7 @@ function rollDate(dateStr, recurring) {
   if (recurring === 'daily')           d.setDate(d.getDate() + 1);
   else if (recurring === 'weekly')     d.setDate(d.getDate() + 7);
   else if (recurring === 'fortnightly') d.setDate(d.getDate() + 14);
+  else if (recurring === 'four-weekly') d.setDate(d.getDate() + 28);
   else if (recurring === 'monthly')    d.setMonth(d.getMonth() + 1);
   else if (recurring === 'quarterly')  d.setMonth(d.getMonth() + 3);
   else if (recurring === 'yearly')     d.setFullYear(d.getFullYear() + 1);
@@ -1932,7 +1936,7 @@ function renderEventRow(ev) {
     ? (endTime ? `${startTime} → ${endTime}` : startTime)
     : '';
   const time = timeText ? `<span>${escapeHtml(timeText)}</span>` : '';
-  const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', yearly:'recYearly' };
+  const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', yearly:'recYearly' };
   const recurring = ev.recurring && recurMap[ev.recurring]
     ? `<span>↻ ${escapeHtml(t(recurMap[ev.recurring]))}</span>` : '';
   // Task = event with explicit done field set on master
@@ -1962,7 +1966,7 @@ function renderEventRow(ev) {
 function renderBillRow(b) {
   const p = b.assignee && PERSON_BY_ID[b.assignee];
   const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
-  const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
+  const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
   const recurring = b.recurring && recurMap[b.recurring]
     ? `<span>↻ ${escapeHtml(t(recurMap[b.recurring]))}</span>` : '';
   const paid = truthy(b.paid);
@@ -1993,8 +1997,8 @@ function renderCreate() {
   const prefilledDate = state.createPrefilledDate || '';
 
   if (kind === 'event' || kind === 'task') {
-    const recurOpts = ['none','daily','weekly','fortnightly','monthly','yearly'];
-    const recurLabels = { none: t('recNone'), daily: t('recDaily'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), monthly: t('recMonthly'), yearly: t('recYearly') };
+    const recurOpts = ['none','daily','weekly','fortnightly','four-weekly','monthly','yearly'];
+    const recurLabels = { none: t('recNone'), daily: t('recDaily'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), 'four-weekly': t('recFourWeekly'), monthly: t('recMonthly'), yearly: t('recYearly') };
     const dRecur = draftVal('cf-recurring','none');
     const dSync  = draftChecked('cf-sync-ios');
     const dAlarm = draftVal('cf-alarm','');
@@ -2246,8 +2250,8 @@ function renderSettings() {
 
   const recurEvents = state.events.filter(e => e.recurring && e.recurring !== 'none' && e.recurring !== '');
   const recurBills  = state.bills.filter(b => b.recurring && b.recurring !== 'none' && b.recurring !== '');
-  const recurMapEv  = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', yearly:'recYearly' };
-  const recurMapBill = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
+  const recurMapEv  = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', yearly:'recYearly' };
+  const recurMapBill = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
 
   function recurRow(it, kind) {
     const p = it.assignee && PERSON_BY_ID[it.assignee];
@@ -2379,7 +2383,7 @@ function renderModal() {
 
     // Recurrence
     if (it.recurring && it.recurring !== 'none' && it.recurring !== '') {
-      const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
+      const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
       const recurLabel = recurMap[it.recurring] ? t(recurMap[it.recurring]) : it.recurring;
       const untilSuffix = it.recur_until ? ` · ${t('fRecurUntil').replace(/\s*\(.*\)$/,'')} ${escapeHtml(it.recur_until)}` : '';
       row(t('fRecurring'), `↻ ${escapeHtml(recurLabel)}${untilSuffix}`);
@@ -2442,8 +2446,8 @@ function renderModal() {
   if (m.type === 'editEvent' || m.type === 'editTask') {
     const ev = m.item || {};
     const isTask = m.type === 'editTask' || (ev.done === true || ev.done === false || ev.done === 'true' || ev.done === 'false');
-    const recurOpts = ['none','daily','weekly','fortnightly','monthly','yearly'];
-    const recurLabels = { none: t('recNone'), daily: t('recDaily'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), monthly: t('recMonthly'), yearly: t('recYearly') };
+    const recurOpts = ['none','daily','weekly','fortnightly','four-weekly','monthly','yearly'];
+    const recurLabels = { none: t('recNone'), daily: t('recDaily'), weekly: t('recWeekly'), fortnightly: t('recFortnightly'), 'four-weekly': t('recFourWeekly'), monthly: t('recMonthly'), yearly: t('recYearly') };
     const titleP = isTask ? t('editTask1') : t('editEvent1');
     const titleS = isTask ? t('editTask2') : t('editEvent2');
     const showUntil = ev.recurring && ev.recurring !== 'none' && ev.recurring !== '';
