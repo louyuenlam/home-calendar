@@ -958,7 +958,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v21 · 2026-04-29';
+const APP_VERSION = 'v22 · 2026-05-02';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1836,8 +1836,9 @@ function renderCalendar() {
     const hasItems = dayItems.length > 0;
 
     const dots = dayItems.slice(0, 4).map(it => {
-      const p = it.assignee && PERSON_BY_ID[it.assignee];
-      const colour = p ? `var(--p-${p.id})` : 'var(--accent-dark)';
+      const ids = parseRecipients(it.assignee);
+      const firstP = ids.length ? PERSON_BY_ID[ids[0]] : null;
+      const colour = firstP ? `var(--p-${firstP.id})` : 'var(--accent-dark)';
       return `<span class="dot" style="background:${colour}"></span>`;
     }).join('');
 
@@ -1896,8 +1897,7 @@ function renderCalendar() {
 }
 
 function renderEventRow(ev) {
-  const p = ev.assignee && PERSON_BY_ID[ev.assignee];
-  const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
+  const chip = renderAssigneeChips(ev.assignee);
 
   // Travel — single row rendering: "[icon] 13:45 → 14:35   London → New York"
   if (ev.kind === 'travel') {
@@ -1964,8 +1964,7 @@ function renderEventRow(ev) {
 }
 
 function renderBillRow(b) {
-  const p = b.assignee && PERSON_BY_ID[b.assignee];
-  const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
+  const chip = renderAssigneeChips(b.assignee);
   const recurMap = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
   const recurring = b.recurring && recurMap[b.recurring]
     ? `<span>↻ ${escapeHtml(t(recurMap[b.recurring]))}</span>` : '';
@@ -2022,7 +2021,7 @@ function renderCreate() {
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
@@ -2092,7 +2091,7 @@ function renderCreate() {
       <div class="field">
         <label>${escapeHtml(t('fWhoPays'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
@@ -2194,7 +2193,7 @@ function renderCreate() {
       <div class="field">
         <label>${escapeHtml(t('fWho'))}</label>
         <div class="chip-picker" id="cf-assignee">
-          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+          ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${draftHasChip('cf-assignee', p.id) ? 'active' : ''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
         </div>
       </div>
       <div class="field">
@@ -2254,8 +2253,7 @@ function renderSettings() {
   const recurMapBill = { daily:'recDaily', weekly:'recWeekly', fortnightly:'recFortnightly', 'four-weekly':'recFourWeekly', monthly:'recMonthly', quarterly:'recQuarterly', yearly:'recYearly' };
 
   function recurRow(it, kind) {
-    const p = it.assignee && PERSON_BY_ID[it.assignee];
-    const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
+    const chip = renderAssigneeChips(it.assignee);
     const map = kind === 'events' ? recurMapEv : recurMapBill;
     const recurLabel = map[it.recurring] ? t(map[it.recurring]) : it.recurring;
     const until = it.recur_until ? ` · ${escapeHtml(t('untilLabel'))} ${escapeHtml(it.recur_until)}` : '';
@@ -2374,11 +2372,10 @@ function renderModal() {
       if (isBill && (it.amount || it.amount === 0)) row(t('fAmount'), `£${Number(it.amount).toFixed(2)}`);
     }
 
-    // Assignee chip
+    // Assignee chips (may be one or more people)
     if (it.assignee) {
-      const p = PERSON_BY_ID[it.assignee];
-      const chip = p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : escapeHtml(it.assignee);
-      row(t('fWho'), chip);
+      const chips = renderAssigneeChips(it.assignee);
+      if (chips) row(t('fWho'), chips);
     }
 
     // Recurrence
@@ -2474,7 +2471,7 @@ function renderModal() {
           <div class="field">
             <label>${escapeHtml(t('fWho'))}</label>
             <div class="chip-picker" id="f-assignee">
-              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${ev.assignee===p.id?'active':''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${isAssignedTo(ev.assignee, p.id)?'active':''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
             </div>
           </div>
           <div class="field">
@@ -2559,7 +2556,7 @@ function renderModal() {
           <div class="field">
             <label>${escapeHtml(t('fWhoPays'))}</label>
             <div class="chip-picker" id="f-assignee">
-              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${b.assignee===p.id?'active':''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${isAssignedTo(b.assignee, p.id)?'active':''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
             </div>
           </div>
           <div class="field">
@@ -2674,7 +2671,7 @@ function renderModal() {
           <div class="field">
             <label>${escapeHtml(t('fWho'))}</label>
             <div class="chip-picker" id="f-assignee">
-              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${it.assignee === p.id ? 'active' : ''}" onclick="pickChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
+              ${PEOPLE.map(p => `<button type="button" data-val="${p.id}" class="${isAssignedTo(it.assignee, p.id)?'active':''}" onclick="toggleChip(this)">${escapeHtml(personName(p.id))}</button>`).join('')}
             </div>
           </div>
           <div class="field">
@@ -2992,6 +2989,23 @@ function serialiseRecipients(arr) {
   return (arr || []).filter(Boolean).join(',');
 }
 
+// Treat assignee like recipients — can be a single string ('jess'), comma-list ('jess,amus'),
+// or array. Returns true if `personId` is in the list.
+function isAssignedTo(assigneeField, personId) {
+  if (!assigneeField || !personId) return false;
+  return parseRecipients(assigneeField).indexOf(personId) >= 0;
+}
+
+// Build the HTML for one or more assignee chips, side by side
+function renderAssigneeChips(assigneeField) {
+  const ids = parseRecipients(assigneeField);
+  if (!ids.length) return '';
+  return ids.map(id => {
+    const p = PERSON_BY_ID[id];
+    return p ? `<span class="chip ${p.cls}">${escapeHtml(personName(p.id))}</span>` : '';
+  }).filter(Boolean).join(' ');
+}
+
 function goToCreate(kind, date) {
   state.tab = 'create';
   state.createKind = kind;
@@ -3139,7 +3153,7 @@ async function submitCreate(kind) {
   if (state.saving) return;
   const title = document.getElementById('cf-title').value.trim();
   const date  = document.getElementById('cf-date').value;
-  const assignee = getPickedChip('cf-assignee');
+  const assignee = serialiseRecipients(getPickedChips('cf-assignee'));
   if (!title) { toast(t('toastTitleRequired')); return; }
   if (kind === 'bill' && !date) { toast(t('toastTitleDateRequired')); return; }
 
@@ -3259,7 +3273,7 @@ async function saveEvent(existingId, isTask) {
   const recurUntilEl = document.getElementById('f-recur-until');
   const recurUntil = recurUntilEl ? recurUntilEl.value : '';
   const notes = document.getElementById('f-notes').value.trim();
-  const assignee = getPickedChip('f-assignee');
+  const assignee = serialiseRecipients(getPickedChips('f-assignee'));
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
   const recipients = syncIos ? serialiseRecipients(getPickedChips('f-recipients')) : '';
@@ -3309,7 +3323,7 @@ async function saveTravel(existingId) {
   const fromTz  = state.editTzFrom || existing.from_tz || getDeviceTimezone();
   const toTz    = state.editTzTo   || existing.to_tz   || fromTz;
   const method  = getPickedChip('f-travel-method');
-  const assignee = getPickedChip('f-assignee');
+  const assignee = serialiseRecipients(getPickedChips('f-assignee'));
   const notes = document.getElementById('f-notes').value.trim();
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
@@ -3359,7 +3373,7 @@ async function saveBill(existingId) {
   const recurUntil = recurUntilEl ? recurUntilEl.value : '';
   const paid = document.getElementById('f-paid').checked;
   const notes = document.getElementById('f-notes').value.trim();
-  const assignee = getPickedChip('f-assignee');
+  const assignee = serialiseRecipients(getPickedChips('f-assignee'));
   const syncIos = document.getElementById('f-sync-ios').checked;
   const alarmRaw = document.getElementById('f-alarm').value;
   const recipients = syncIos ? serialiseRecipients(getPickedChips('f-recipients')) : '';
