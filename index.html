@@ -873,6 +873,39 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
   background: var(--warn);
 }
 
+/* ---------- Saving overlay ---------- */
+#saving-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(43, 49, 66, 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#saving-overlay .saving-pill {
+  background: var(--ink);
+  color: var(--cream);
+  padding: 16px 30px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}
+#saving-overlay .spinner {
+  width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
 /* ---------- Bills list ---------- */
 .bills-section-head {
   font-family: 'Fraunces', serif;
@@ -958,7 +991,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v22 · 2026-05-02';
+const APP_VERSION = 'v23 · 2026-07-02';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -3160,6 +3193,7 @@ async function submitCreate(kind) {
   state.saving = true;
   // Re-render so the Create button shows "Creating…" + disabled
   rerenderActive();
+  setSavingOverlay(true);
 
   try {
     await submitCreateInner(kind, title, date, assignee);
@@ -3168,6 +3202,7 @@ async function submitCreate(kind) {
     toast(t('toastSaveFailed'));
   } finally {
     state.saving = false;
+    setSavingOverlay(false);
     rerenderActive();
   }
 }
@@ -3295,6 +3330,7 @@ async function saveEvent(existingId, isTask) {
   }
   state.saving = true;
   render();
+  setSavingOverlay(true);
   try {
     await updateEvent(payload);
     state.modal = null;
@@ -3304,6 +3340,7 @@ async function saveEvent(existingId, isTask) {
     toast(t('toastSaveFailed'));
   } finally {
     state.saving = false;
+    setSavingOverlay(false);
     render();
   }
 }
@@ -3345,6 +3382,7 @@ async function saveTravel(existingId) {
   rememberTimezone(fromTz); rememberTimezone(toTz);
   state.saving = true;
   render();
+  setSavingOverlay(true);
   try {
     await updateEvent(payload);
     state.modal = null;
@@ -3356,6 +3394,7 @@ async function saveTravel(existingId) {
     toast(t('toastSaveFailed'));
   } finally {
     state.saving = false;
+    setSavingOverlay(false);
     render();
   }
 }
@@ -3389,6 +3428,7 @@ async function saveBill(existingId) {
   };
   state.saving = true;
   render();
+  setSavingOverlay(true);
   try {
     await updateBill(payload);
     state.modal = null;
@@ -3398,6 +3438,7 @@ async function saveBill(existingId) {
     toast(t('toastSaveFailed'));
   } finally {
     state.saving = false;
+    setSavingOverlay(false);
     render();
   }
 }
@@ -3523,6 +3564,20 @@ function wipeLocal() {
     }
   };
   render();
+}
+
+// Full-screen saving indicator — lives outside #app so render() can't wipe it.
+function setSavingOverlay(on) {
+  let host = document.getElementById('saving-overlay');
+  if (on) {
+    if (host) return;
+    host = document.createElement('div');
+    host.id = 'saving-overlay';
+    host.innerHTML = `<div class="saving-pill"><span class="spinner"></span>${escapeHtml(t('savingBtn'))}</div>`;
+    document.body.appendChild(host);
+  } else {
+    if (host) host.remove();
+  }
 }
 
 // ----- Toast -----
