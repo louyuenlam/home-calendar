@@ -437,6 +437,23 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 }
 .cal-day.selected .dot { background: white; }
 
+/* Month navigation slide — subtle, direction matches the arrow tapped */
+@keyframes calSlideFromRight {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+@keyframes calSlideFromLeft {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.cal-main.slide-in-right { animation: calSlideFromRight 0.22s ease-out; }
+.cal-main.slide-in-left  { animation: calSlideFromLeft  0.22s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cal-main.slide-in-right,
+  .cal-main.slide-in-left { animation: none; }
+}
+
 /* Inline event titles — hidden on phone, shown on tablets/desktop */
 .cal-day .cal-items { display: none; }
 
@@ -1065,7 +1082,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v24 · 2026-07-21';
+const APP_VERSION = 'v25 · 2026-07-21';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1914,7 +1931,9 @@ function renderSyncPill() {
 }
 
 // ----- Render: Calendar -----
-function renderCalendar() {
+// Computes everything the calendar card needs: grid cells, month label,
+// weekday headers, and the selected-day editor.
+function buildCalendarParts() {
   if (!state.viewMonth) state.viewMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   const vm = state.viewMonth;
   const year = vm.getFullYear(), month = vm.getMonth();
@@ -1997,29 +2016,43 @@ function renderCalendar() {
     `;
   }
 
+  return { cells, monthLabel, wk, editor };
+}
+
+function renderCalendar() {
   return `
     <div class="view">
-      <div class="card cal-card">
-        <div class="cal-panes">
-          <div class="cal-main">
-            <div class="cal-toggle">
-              <button class="${state.calMode==='events'?'active':''}" onclick="setCalMode('events')">${escapeHtml(t('calEvents'))}</button>
-              <button class="${state.calMode==='bills'?'active':''}"  onclick="setCalMode('bills')">${escapeHtml(t('calBills'))}</button>
-            </div>
-            <div class="cal-nav">
-              <button class="nav-btn" onclick="navMonth(-1)">‹</button>
-              <div class="month-label">${monthLabel}</div>
-              <button class="nav-btn" onclick="navMonth(1)">›</button>
-            </div>
-            <div class="cal-weekdays">
-              <div>${escapeHtml(wk[0])}</div><div>${escapeHtml(wk[1])}</div><div>${escapeHtml(wk[2])}</div><div>${escapeHtml(wk[3])}</div><div>${escapeHtml(wk[4])}</div><div>${escapeHtml(wk[5])}</div><div>${escapeHtml(wk[6])}</div>
-            </div>
-            <div class="cal-grid">${cells}</div>
-          </div>
-          <div class="cal-side">
-            ${editor}
-          </div>
+      <div class="card cal-card" id="cal-card">
+        ${renderCalendarInner()}
+      </div>
+    </div>
+  `;
+}
+
+// The inner content of the calendar card. Kept separate so month navigation and
+// day selection can swap just this node instead of rebuilding the whole app,
+// which is what caused the screen to flicker.
+function renderCalendarInner() {
+  const built = buildCalendarParts();
+  return `
+    <div class="cal-panes">
+      <div class="cal-main">
+        <div class="cal-toggle">
+          <button class="${state.calMode==='events'?'active':''}" onclick="setCalMode('events')">${escapeHtml(t('calEvents'))}</button>
+          <button class="${state.calMode==='bills'?'active':''}"  onclick="setCalMode('bills')">${escapeHtml(t('calBills'))}</button>
         </div>
+        <div class="cal-nav">
+          <button class="nav-btn" onclick="navMonth(-1)">‹</button>
+          <div class="month-label">${built.monthLabel}</div>
+          <button class="nav-btn" onclick="navMonth(1)">›</button>
+        </div>
+        <div class="cal-weekdays">
+          <div>${escapeHtml(built.wk[0])}</div><div>${escapeHtml(built.wk[1])}</div><div>${escapeHtml(built.wk[2])}</div><div>${escapeHtml(built.wk[3])}</div><div>${escapeHtml(built.wk[4])}</div><div>${escapeHtml(built.wk[5])}</div><div>${escapeHtml(built.wk[6])}</div>
+        </div>
+        <div class="cal-grid">${built.cells}</div>
+      </div>
+      <div class="cal-side">
+        ${built.editor}
       </div>
     </div>
   `;
@@ -2936,6 +2969,13 @@ function rerenderActive() {
     renderSyncPill();
     return;
   }
+  // On the calendar, swap only the calendar card so background syncs don't
+  // flash the whole screen.
+  if (state.tab === 'calendar' && document.getElementById('cal-card')) {
+    rerenderCalendarCard();
+    renderSyncPill();
+    return;
+  }
   render();
 }
 
@@ -2998,21 +3038,40 @@ function setTab(tab) {
   if (tab !== 'create') state.createPrefilledDate = null;
   render();
 }
-function setCalMode(mode) { state.calMode = mode; render(); }
+function setCalMode(mode) { state.calMode = mode; rerenderCalendarCard(); }
 function setCreateKind(kind) {
   // Save current input before rebuilding the form for a different kind
   snapshotCreateDraft();
   state.createKind = kind;
   render();
 }
+// Re-render only the calendar card, leaving the header, tabs and everything else
+// untouched. Avoids the full-page innerHTML swap that caused visible flicker.
+// `dir` of -1 or 1 adds a slide in that direction; omit for no animation.
+function rerenderCalendarCard(dir) {
+  const card = document.getElementById('cal-card');
+  if (!card) { render(); return; }
+  card.innerHTML = renderCalendarInner();
+  if (dir) {
+    const grid = card.querySelector('.cal-main');
+    if (grid) {
+      grid.classList.remove('slide-in-left', 'slide-in-right');
+      // Force reflow so the animation restarts even on rapid taps
+      void grid.offsetWidth;
+      grid.classList.add(dir > 0 ? 'slide-in-right' : 'slide-in-left');
+    }
+  }
+}
+
 function navMonth(delta) {
   const vm = state.viewMonth || new Date();
   state.viewMonth = new Date(vm.getFullYear(), vm.getMonth() + delta, 1);
-  render();
+  state.selectedDate = null;
+  rerenderCalendarCard(delta);
 }
 function selectDay(key) {
   state.selectedDate = (state.selectedDate === key) ? null : key;
-  render();
+  rerenderCalendarCard();
 }
 function pickChip(btn) {
   const parent = btn.parentElement;
