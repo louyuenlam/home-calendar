@@ -437,6 +437,80 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 }
 .cal-day.selected .dot { background: white; }
 
+/* Inline event titles — hidden on phone, shown on tablets/desktop */
+.cal-day .cal-items { display: none; }
+
+/* ---------- Wide screens (iPad / desktop): two-pane layout ---------- */
+@media (min-width: 820px) {
+  .app { max-width: 1180px; }
+
+  .cal-card { padding: 22px; }
+
+  .cal-panes {
+    display: grid;
+    grid-template-columns: minmax(0, 1.85fr) minmax(300px, 1fr);
+    gap: 24px;
+    align-items: start;
+  }
+  .cal-side {
+    position: sticky;
+    top: 12px;
+    border-left: 1px solid var(--border);
+    padding-left: 22px;
+    min-height: 200px;
+  }
+  .cal-side .day-editor { margin-top: 0; border-top: none; padding-top: 0; }
+
+  /* Roomier day cells that fit text */
+  .cal-grid { gap: 6px; }
+  .cal-day {
+    aspect-ratio: auto;
+    min-height: 96px;
+    align-items: stretch;
+    justify-content: flex-start;
+    padding: 6px 6px 4px;
+    font-size: 14px;
+  }
+  .cal-day .day-num { text-align: left; font-size: 14px; }
+  .cal-day .dots { display: none; }
+  .cal-day .cal-items {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 5px;
+    width: 100%;
+    overflow: hidden;
+  }
+  .cal-day .cal-item {
+    display: block;
+    width: 100%;
+    font-size: 11px;
+    line-height: 1.3;
+    text-align: left;
+    padding: 2px 4px;
+    border-radius: 3px;
+    border-left: 3px solid var(--accent-dark);
+    background: rgba(255,255,255,0.72);
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .cal-day .cal-more {
+    font-size: 10px;
+    color: var(--muted);
+    text-align: left;
+    padding-left: 4px;
+  }
+  .cal-day.selected .cal-item {
+    background: rgba(255,255,255,0.9);
+  }
+  .cal-day.selected .cal-more { color: rgba(255,255,255,0.85); }
+
+  /* Forms and modals get more breathing room */
+  .modal { max-width: 620px; }
+}
+
 /* ---------- Day editor ---------- */
 .day-editor {
   margin-top: 16px;
@@ -991,7 +1065,7 @@ const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v23 · 2026-07-02';
+const APP_VERSION = 'v24 · 2026-07-21';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1875,11 +1949,27 @@ function renderCalendar() {
       return `<span class="dot" style="background:${colour}"></span>`;
     }).join('');
 
+    // Inline titles — only visible on wide screens (iPad); phone keeps the dots
+    const inlineItems = dayItems.slice(0, 3).map(it => {
+      const ids = parseRecipients(it.assignee);
+      const firstP = ids.length ? PERSON_BY_ID[ids[0]] : null;
+      const colour = firstP ? `var(--p-${firstP.id})` : 'var(--accent-dark)';
+      const tm = formatTimeForDisplay(it.time);
+      const label = state.calMode === 'bills'
+        ? `£${Number(it.amount || 0).toFixed(0)} ${it.title || ''}`
+        : `${tm ? tm + ' ' : ''}${it.title || t('untitled')}`;
+      return `<span class="cal-item" style="border-left-color:${colour}">${escapeHtml(label)}</span>`;
+    }).join('');
+    const overflow = dayItems.length > 3
+      ? `<span class="cal-more">+${dayItems.length - 3}</span>`
+      : '';
+
     cells += `
       <button class="cal-day ${inMonth?'':'other-month'} ${isToday?'today':''} ${hasItems?'has-items':''} ${isSelected?'selected':''}"
               onclick="selectDay('${key}')">
         <span class="day-num">${d.getDate()}</span>
         <span class="dots">${dots}</span>
+        <span class="cal-items">${inlineItems}${overflow}</span>
       </button>
     `;
   }
@@ -1909,21 +1999,27 @@ function renderCalendar() {
 
   return `
     <div class="view">
-      <div class="card">
-        <div class="cal-toggle">
-          <button class="${state.calMode==='events'?'active':''}" onclick="setCalMode('events')">${escapeHtml(t('calEvents'))}</button>
-          <button class="${state.calMode==='bills'?'active':''}"  onclick="setCalMode('bills')">${escapeHtml(t('calBills'))}</button>
+      <div class="card cal-card">
+        <div class="cal-panes">
+          <div class="cal-main">
+            <div class="cal-toggle">
+              <button class="${state.calMode==='events'?'active':''}" onclick="setCalMode('events')">${escapeHtml(t('calEvents'))}</button>
+              <button class="${state.calMode==='bills'?'active':''}"  onclick="setCalMode('bills')">${escapeHtml(t('calBills'))}</button>
+            </div>
+            <div class="cal-nav">
+              <button class="nav-btn" onclick="navMonth(-1)">‹</button>
+              <div class="month-label">${monthLabel}</div>
+              <button class="nav-btn" onclick="navMonth(1)">›</button>
+            </div>
+            <div class="cal-weekdays">
+              <div>${escapeHtml(wk[0])}</div><div>${escapeHtml(wk[1])}</div><div>${escapeHtml(wk[2])}</div><div>${escapeHtml(wk[3])}</div><div>${escapeHtml(wk[4])}</div><div>${escapeHtml(wk[5])}</div><div>${escapeHtml(wk[6])}</div>
+            </div>
+            <div class="cal-grid">${cells}</div>
+          </div>
+          <div class="cal-side">
+            ${editor}
+          </div>
         </div>
-        <div class="cal-nav">
-          <button class="nav-btn" onclick="navMonth(-1)">‹</button>
-          <div class="month-label">${monthLabel}</div>
-          <button class="nav-btn" onclick="navMonth(1)">›</button>
-        </div>
-        <div class="cal-weekdays">
-          <div>${escapeHtml(wk[0])}</div><div>${escapeHtml(wk[1])}</div><div>${escapeHtml(wk[2])}</div><div>${escapeHtml(wk[3])}</div><div>${escapeHtml(wk[4])}</div><div>${escapeHtml(wk[5])}</div><div>${escapeHtml(wk[6])}</div>
-        </div>
-        <div class="cal-grid">${cells}</div>
-        ${editor}
       </div>
     </div>
   `;
