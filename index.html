@@ -37,8 +37,8 @@
   /* Per-person colours (chips) */
   --p-jess:       #c97a6b;
   --p-jess-tint:  #f5e3df;
-  --p-amus:       #5a7196;
-  --p-amus-tint:  #e8eef7;
+  --p-amus:       #2f6b4f;
+  --p-amus-tint:  #dcebe2;
   --p-mum:        #b08bb5;
   --p-mum-tint:   #efe6f1;
   --p-house:      #7d8d6e;
@@ -46,6 +46,10 @@
 
   --p-dad:        #6b8a8c;
   --p-dad-tint:   #dfe9ea;
+  --p-anny:       #c2577f;
+  --p-anny-tint:  #f6e1ea;
+  --p-eliot:      #8b5e3c;
+  --p-eliot-tint: #efe2d8;
 
   --p-milk:       #b89a7a;
   --p-milk-tint:  #f0e8dc;
@@ -435,7 +439,8 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
   border-radius: 50%;
   background: var(--accent-dark);
 }
-.cal-day.selected .dot { background: white; }
+/* !important: each dot carries its person colour inline, which would otherwise win */
+.cal-day.selected .dot { background: white !important; }
 
 /* Month navigation slide — subtle, direction matches the arrow tapped */
 @keyframes calSlideFromRight {
@@ -609,6 +614,8 @@ input, textarea, select { font-family: inherit; font-size: 16px; color: var(--in
 .chip.mum   { background: var(--p-mum-tint);   color: var(--p-mum); }
 .chip.house { background: var(--p-house-tint); color: var(--p-house); }
 .chip.dad   { background: var(--p-dad-tint);   color: var(--p-dad); }
+.chip.anny  { background: var(--p-anny-tint);  color: var(--p-anny); }
+.chip.eliot { background: var(--p-eliot-tint); color: var(--p-eliot); }
 .chip.milk  { background: var(--p-milk-tint);  color: var(--p-milk); }
 .chip.bb    { background: var(--p-bb-tint);    color: var(--p-bb); }
 .chip.cilla { background: var(--p-cilla-tint); color: var(--p-cilla); }
@@ -1073,16 +1080,22 @@ const PEOPLE = [
   { id: 'amus',  name: 'Amus',    cls: 'amus' },
   { id: 'mum',   name: 'Mum',     cls: 'mum' },
   { id: 'dad',   name: 'Dad',     cls: 'dad' },
-  { id: 'house', name: 'House',   cls: 'house' },
-  { id: 'milk',  name: 'Milk',    cls: 'milk',  pet: true },
+  { id: 'anny',  name: 'Anny',    cls: 'anny' },
+  { id: 'eliot', name: 'Eliot',   cls: 'eliot' },
+  { id: 'house', name: 'House',   cls: 'house', group: true },   // not a person: has no phone or calendar feed
   { id: 'bb',    name: 'BB',      cls: 'bb',    pet: true },
   { id: 'cilla', name: 'Cilla',   cls: 'cilla', pet: true }
 ];
-const PERSON_BY_ID = Object.fromEntries(PEOPLE.map(p => [p.id, p]));
+// No longer selectable when creating or editing, but kept so entries already
+// saved under them still show their name chip.
+const RETIRED_PEOPLE = [
+  { id: 'milk',  name: 'Milk',    cls: 'milk',  pet: true }
+];
+const PERSON_BY_ID = Object.fromEntries(PEOPLE.concat(RETIRED_PEOPLE).map(p => [p.id, p]));
 
 // App version — bump this whenever pushing a new build so you can verify what's loaded.
 // Shows in the sync pill area as a tiny grey label.
-const APP_VERSION = 'v25 · 2026-07-21';
+const APP_VERSION = 'v26 · 2026-11-15';
 
 // Travel methods + their inline SVG icon (monochrome, scales with text colour)
 const TRAVEL_METHODS = [
@@ -1290,7 +1303,7 @@ const I18N = {
     syncQueued: 'Offline — queued', syncNoUrl: 'No sync URL — queued',
 
     untitled: '(untitled)', never: 'Never',
-    pJess: 'Jessica', pAmus: 'Amus', pMum: 'Mum', pDad: 'Dad', pHouse: 'House',
+    pJess: 'Jessica', pAmus: 'Amus', pMum: 'Mum', pDad: 'Dad', pAnny: 'Anny', pEliot: 'Eliot', pHouse: 'House',
     pMilk: 'Milk', pBb: 'BB', pCilla: 'Cilla',
     months: ['January','February','March','April','May','June','July','August','September','October','November','December'],
     weekdaysFull: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
@@ -1434,7 +1447,7 @@ const I18N = {
     syncQueued: '離線 — 已排隊', syncNoUrl: '未設網址 — 已排隊',
 
     untitled: '(未命名)', never: '從未',
-    pJess: 'Jessica', pAmus: 'Amus', pMum: '媽媽', pDad: '爸爸', pHouse: '家庭',
+    pJess: 'Jessica', pAmus: 'Amus', pMum: '媽媽', pDad: '爸爸', pAnny: 'Anny', pEliot: 'Eliot', pHouse: '家庭',
     pMilk: '牛奶', pBb: 'BB', pCilla: 'Cilla',
     months: ['一月','二月','三月','四月','五月','六月','七月','八月','九月','十月','十一月','十二月'],
     weekdaysFull: ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'],
@@ -1453,6 +1466,8 @@ function setLang(lang) {
   state.lang = lang;
   document.documentElement.lang = I18N[lang].htmlLang;
   document.body.classList.toggle('lang-zh', lang === 'zh');
+  // Keep anything typed into the Create form when the language is switched
+  snapshotCreateDraft();
   render();
 }
 function t(key) {
@@ -1473,7 +1488,7 @@ function MONTHS()        { return I18N[state.lang || getLang()].months; }
 function WEEKDAYS_FULL() { return I18N[state.lang || getLang()].weekdaysFull; }
 function personName(id) {
   if (!id) return '';
-  const map = { jess:'pJess', amus:'pAmus', mum:'pMum', dad:'pDad', house:'pHouse', milk:'pMilk', bb:'pBb', cilla:'pCilla' };
+  const map = { jess:'pJess', amus:'pAmus', mum:'pMum', dad:'pDad', anny:'pAnny', eliot:'pEliot', house:'pHouse', milk:'pMilk', bb:'pBb', cilla:'pCilla' };
   return t(map[id] || '') || (PERSON_BY_ID[id] && PERSON_BY_ID[id].name) || '';
 }
 
@@ -1803,14 +1818,10 @@ async function updateEvent(item) {
   rerenderActive();
 }
 async function deleteEvent(id) {
-  console.log('[DELETE] deleteEvent called with id:', id);
-  console.log('[DELETE] state.events before filter:', state.events.length);
   state.events = state.events.filter(e => e.id !== id);
-  console.log('[DELETE] state.events after filter:', state.events.length);
   lsSet(LS.events, state.events);
   rerenderActive();
-  const result = await syncPost('delete', 'events', { id });
-  console.log('[DELETE] syncPost result:', result, 'state.events after sync:', state.events.length);
+  await syncPost('delete', 'events', { id });
   rerenderActive();
 }
 async function addBill(item) {
@@ -2507,7 +2518,8 @@ function renderModal() {
     }
 
     // Date / time
-    const dateStr = it.date || m.instanceDate || '';
+    // For a repeating item, show the date of the occurrence that was tapped
+    const dateStr = (m.isInstance && m.instanceDate) ? m.instanceDate : (it.date || m.instanceDate || '');
     if (isTravel) {
       const startTime = formatTimeForDisplay(it.time);
       const endTime = formatTimeForDisplay(it.end_time);
@@ -3123,7 +3135,7 @@ function onModalSyncIosChange() {
 // `preselected` is an array of person ids that should be marked active.
 function renderRecipientsBlock(prefix, preselected) {
   const sel = new Set(preselected || []);
-  const humans = PEOPLE.filter(p => !p.pet);
+  const humans = PEOPLE.filter(p => !p.pet && !p.group);
   const wrapId = prefix + '-recipients-wrap';
   const pickerId = prefix + '-recipients';
   return `
@@ -3140,7 +3152,7 @@ function renderRecipientsBlock(prefix, preselected) {
 function renderRecipientsBlockWithDraft(prefix, syncIosChecked) {
   const wrapId = prefix + '-recipients-wrap';
   const pickerId = prefix + '-recipients';
-  const humans = PEOPLE.filter(p => !p.pet);
+  const humans = PEOPLE.filter(p => !p.pet && !p.group);
   const display = syncIosChecked ? 'block' : 'none';
   return `
     <div class="field" id="${wrapId}" style="display:${display}">
@@ -3156,7 +3168,7 @@ function renderRecipientsBlockWithDraft(prefix, syncIosChecked) {
 function renderRecipientsBlockEdit(item) {
   const preselected = parseRecipients(item.recipients);
   const sel = new Set(preselected);
-  const humans = PEOPLE.filter(p => !p.pet);
+  const humans = PEOPLE.filter(p => !p.pet && !p.group);
   const display = truthy(item.sync_to_ios) ? 'block' : 'none';
   return `
     <div class="field" id="f-recipients-wrap" style="display:${display}">
@@ -3237,13 +3249,10 @@ function openEditFlow(kind, id, instanceDate, isInstance) {
 }
 
 function openDeleteFlow(kind, id, instanceDate, isInstance) {
-  console.log('[DELETE] openDeleteFlow called:', {kind, id, instanceDate, isInstance});
   const list = kind === 'events' ? state.events : state.bills;
   const item = list.find(x => x.id === id);
-  console.log('[DELETE] item found:', item);
-  if (!item) { console.log('[DELETE] EXIT: item not found in state'); return; }
+  if (!item) return;
   const isRecurring = item.recurring && item.recurring !== 'none' && item.recurring !== '';
-  console.log('[DELETE] isRecurring:', isRecurring);
   if (isRecurring && isInstance) {
     state.modal = { type: 'recurChoice', mode: 'delete', kind, id, instanceDate, item };
     render();
@@ -3255,16 +3264,15 @@ function openDeleteFlow(kind, id, instanceDate, isInstance) {
     body: t('confirmDeleteBody'),
     confirmLabel: t('deleteBtn'),
     onConfirm: () => {
-      console.log('[DELETE] onConfirm fired with id:', id, 'kind:', kind);
       state.modal = null; render();
       if (kind === 'events') {
         deleteEvent(id)
-          .then(() => { console.log('[DELETE] deleteEvent resolved'); toast(t('toastEventDeleted')); })
-          .catch(err => console.log('[DELETE] deleteEvent ERROR:', err));
+          .then(() => toast(t('toastEventDeleted')))
+          .catch(err => { console.error('deleteEvent failed:', err); toast(t('toastSaveFailed')); });
       } else {
         deleteBill(id)
-          .then(() => { console.log('[DELETE] deleteBill resolved'); toast(t('toastBillDeleted')); })
-          .catch(err => console.log('[DELETE] deleteBill ERROR:', err));
+          .then(() => toast(t('toastBillDeleted')))
+          .catch(err => { console.error('deleteBill failed:', err); toast(t('toastSaveFailed')); });
       }
     }
   };
@@ -3629,9 +3637,7 @@ function closeModal(e) {
 
 function runModalConfirm() {
   const m = state.modal;
-  console.log('[CONFIRM] runModalConfirm called, modal:', m);
   if (!m || m.type !== 'confirm' || typeof m.onConfirm !== 'function') {
-    console.log('[CONFIRM] EXIT: invalid state', {hasModal: !!m, type: m && m.type, hasFn: typeof (m && m.onConfirm)});
     return;
   }
   m.onConfirm();
@@ -3737,7 +3743,6 @@ function setSavingOverlay(on) {
 
 // ----- Toast -----
 function toast(msg) {
-  console.log('[TOAST]', msg);
   // Use a dedicated persistent host so render() can never wipe it
   let host = document.getElementById('toast-host');
   if (!host) {
